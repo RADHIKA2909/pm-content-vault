@@ -4,7 +4,7 @@ import { API_URL } from '../lib/api.js'
 import StatusMessage from './StatusMessage.jsx'
 import UploadField from './UploadField.jsx'
 
-function IngestImage() {
+function IngestImage({ onSaved }) {
   const [status, setStatus] = useState(null)
 
   const handleFile = async (file) => {
@@ -36,6 +36,7 @@ function IngestImage() {
       }
 
       setStatus({ type: 'success', message: 'Saved.' })
+      onSaved?.()
     } catch (err) {
       setStatus({ type: 'error', message: err.message })
     }

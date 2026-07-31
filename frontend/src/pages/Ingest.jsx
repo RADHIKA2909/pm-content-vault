@@ -13,24 +13,21 @@ const TABS = [
   { key: 'whatsapp', label: 'WhatsApp', Component: IngestWhatsapp },
 ]
 
-function Ingest() {
+function Ingest({ onSaved }) {
   const [activeTab, setActiveTab] = useState('text')
   const ActiveComponent = TABS.find((t) => t.key === activeTab).Component
 
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-1">Save something new</h2>
-      <p className="text-sm text-slate-500 mb-5">Choose how you want to bring content into your vault.</p>
-
-      <div className="flex flex-wrap gap-1.5 mb-6 rounded-full bg-slate-100 p-1 w-fit">
+      <div className="mb-4 flex w-fit flex-wrap gap-1 rounded-full bg-muted p-1">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
+            className={`rounded-full px-3.5 py-1.5 text-caption transition-colors ${
               activeTab === tab.key
-                ? 'bg-white text-slate-900 shadow-sm font-medium'
-                : 'text-slate-500 hover:text-slate-700'
+                ? 'bg-surface font-medium text-text-primary shadow-sm'
+                : 'text-text-secondary hover:text-text-primary'
             }`}
           >
             {tab.label}
@@ -38,9 +35,7 @@ function Ingest() {
         ))}
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6">
-        <ActiveComponent />
-      </div>
+      <ActiveComponent onSaved={onSaved} />
     </div>
   )
 }

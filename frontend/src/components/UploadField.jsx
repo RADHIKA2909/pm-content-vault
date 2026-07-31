@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { UploadCloudIcon } from './icons.jsx'
+import { UploadCloud } from 'lucide-react'
 
 function UploadField({ accept, description, onFile }) {
   const inputRef = useRef(null)
@@ -24,12 +24,12 @@ function UploadField({ accept, description, onFile }) {
         handleFiles(e.dataTransfer.files)
       }}
       className={`cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
-        dragOver ? 'border-indigo-400 bg-indigo-50' : 'border-slate-300 bg-slate-50 hover:border-slate-400'
+        dragOver ? 'border-primary bg-primary-light' : 'border-border-subtle bg-muted hover:border-text-secondary'
       }`}
     >
-      <UploadCloudIcon className="h-6 w-6 mx-auto text-slate-400 mb-2" />
-      <p className="text-sm text-slate-600">{description}</p>
-      <p className="text-xs text-slate-400 mt-1">Click to browse or drag a file here</p>
+      <UploadCloud className="mx-auto mb-2 h-6 w-6 text-text-secondary" strokeWidth={1.5} />
+      <p className="text-sm text-text-secondary">{description}</p>
+      <p className="mt-1 text-caption text-text-secondary/70">Click to browse or drag a file here</p>
       <input
         ref={inputRef}
         type="file"

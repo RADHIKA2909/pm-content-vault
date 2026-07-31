@@ -12,7 +12,7 @@ function readFileAsText(file) {
   })
 }
 
-function IngestWhatsapp() {
+function IngestWhatsapp({ onSaved }) {
   const [status, setStatus] = useState(null)
 
   const handleFile = async (file) => {
@@ -34,6 +34,7 @@ function IngestWhatsapp() {
 
       const { count } = await res.json()
       setStatus({ type: 'success', message: `Saved ${count} messages.` })
+      onSaved?.()
     } catch (err) {
       setStatus({ type: 'error', message: err.message })
     }

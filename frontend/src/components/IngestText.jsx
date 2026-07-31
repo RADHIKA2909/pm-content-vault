@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { API_URL } from '../lib/api.js'
 import StatusMessage from './StatusMessage.jsx'
+import Button from './Button.jsx'
 
-function IngestText() {
+function IngestText({ onSaved }) {
   const [text, setText] = useState('')
   const [status, setStatus] = useState(null)
 
@@ -24,6 +25,7 @@ function IngestText() {
 
       setText('')
       setStatus({ type: 'success', message: 'Saved.' })
+      onSaved?.()
     } catch (err) {
       setStatus({ type: 'error', message: err.message })
     }
@@ -36,16 +38,13 @@ function IngestText() {
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={8}
-          className="rounded-xl border border-slate-300 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+          className="resize-none rounded-xl border border-border-subtle p-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
           placeholder="Paste PM-prep content here..."
           required
         />
-        <button
-          type="submit"
-          className="self-start rounded-full bg-indigo-600 text-white px-5 py-2 text-sm font-medium hover:bg-indigo-700 transition-colors"
-        >
+        <Button type="submit" className="self-start">
           Save
-        </button>
+        </Button>
       </form>
       <StatusMessage status={status} />
     </div>

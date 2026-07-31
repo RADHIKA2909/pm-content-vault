@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { API_URL } from '../lib/api.js'
 import StatusMessage from './StatusMessage.jsx'
+import Button from './Button.jsx'
 
-function IngestLink() {
+function IngestLink({ onSaved }) {
   const [url, setUrl] = useState('')
   const [status, setStatus] = useState(null)
 
@@ -24,6 +25,7 @@ function IngestLink() {
 
       setUrl('')
       setStatus({ type: 'success', message: 'Saved.' })
+      onSaved?.()
     } catch (err) {
       setStatus({ type: 'error', message: err.message })
     }
@@ -36,16 +38,13 @@ function IngestLink() {
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          className="flex-1 rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          className="flex-1 rounded-xl border border-border-subtle px-3 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
           placeholder="https://..."
           required
         />
-        <button
-          type="submit"
-          className="rounded-full bg-indigo-600 text-white px-5 py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors whitespace-nowrap"
-        >
+        <Button type="submit" className="whitespace-nowrap">
           Fetch &amp; Save
-        </button>
+        </Button>
       </form>
       <StatusMessage status={status} />
     </div>

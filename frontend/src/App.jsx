@@ -1,16 +1,22 @@
 import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout.jsx'
-import Ingest from './pages/Ingest.jsx'
 import Dashboard from './pages/Dashboard.jsx'
+import Library from './pages/Library.jsx'
+import ItemDetail from './pages/ItemDetail.jsx'
 import Chat from './pages/Chat.jsx'
+import ReviewQueue from './pages/ReviewQueue.jsx'
+import Settings from './pages/Settings.jsx'
 
 function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<Ingest />} />
-        <Route path="dashboard" element={<Dashboard />} />
+        <Route index element={<Dashboard />} />
+        <Route path="library" element={<Library />} />
+        <Route path="library/:id" element={<ItemDetail />} />
         <Route path="chat" element={<Chat />} />
+        <Route path="review" element={<ReviewQueue />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
   )

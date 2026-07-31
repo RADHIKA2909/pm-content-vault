@@ -1,7 +1,7 @@
 const STYLES = {
-  pending: 'text-slate-500',
-  success: 'text-emerald-600',
-  error: 'text-rose-600',
+  pending: 'text-text-secondary',
+  success: 'text-success',
+  error: 'text-warning',
 }
 
 function StatusMessage({ status }) {

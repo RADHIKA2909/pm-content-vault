@@ -1,171 +1,222 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Search, Plus, MessageSquare } from 'lucide-react'
 import { API_URL } from '../lib/api.js'
-import { categoryColor } from '../lib/categoryColors.js'
+import Card from '../components/Card.jsx'
+import Button from '../components/Button.jsx'
+import Modal from '../components/Modal.jsx'
+import { CategoryChip } from '../components/Chip.jsx'
+import { SkeletonCard } from '../components/Skeleton.jsx'
+import Ingest from './Ingest.jsx'
 
-const CATEGORIES = [
-  'Interview Questions',
-  'Job Postings',
-  'Application Tips',
-  'Frameworks',
-  'Industry News',
-  'Other',
-]
+// Personalization touch for this single-user v0 tool — swap for a real
+// profile name once Supabase Auth login exists.
+const USER_FIRST_NAME = 'Radhika'
 
-const SOURCE_LABELS = {
-  linkedin_paste: 'Pasted text',
-  link: 'Link',
-  image: 'Image',
-  pdf: 'PDF',
-  whatsapp_export: 'WhatsApp',
-}
-
-const REVIEW_TAG = 'review before mock'
-
-function SkeletonCard() {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 animate-pulse">
-      <div className="h-3 w-24 bg-slate-100 rounded mb-3" />
-      <div className="h-3.5 w-full bg-slate-100 rounded mb-2" />
-      <div className="h-3.5 w-2/3 bg-slate-100 rounded" />
-    </div>
-  )
+function greeting() {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
 }
 
 function Dashboard() {
   const [items, setItems] = useState([])
-  const [category, setCategory] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const [resurfaceItems, setResurfaceItems] = useState([])
+  const [chatHistory, setChatHistory] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [addOpen, setAddOpen] = useState(false)
+  const navigate = useNavigate()
 
-  const fetchItems = async () => {
+  const fetchAll = async () => {
     setLoading(true)
-    setError(null)
-
     try {
-      const url = new URL(`${API_URL}/api/items`)
-      if (category) url.searchParams.set('category', category)
-
-      const res = await fetch(url)
-      if (!res.ok) throw new Error('Failed to load items')
-
-      setItems(await res.json())
-    } catch (err) {
-      setError(err.message)
+      const [itemsRes, resurfaceRes, historyRes] = await Promise.all([
+        fetch(`${API_URL}/api/items`),
+        fetch(`${API_URL}/api/resurface`),
+        fetch(`${API_URL}/api/chat/history`),
+      ])
+      setItems(await itemsRes.json())
+      setResurfaceItems(await resurfaceRes.json())
+      setChatHistory(await historyRes.json())
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchItems()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category])
+    fetchAll()
+  }, [])
 
-  const handleEngage = async (id) => {
-    await fetch(`${API_URL}/api/items/${id}/engage`, { method: 'PATCH' })
-    fetchItems()
-  }
+  const stats = useMemo(() => {
+    const total = items.length
+    const engaged = items.filter((i) => i.last_engaged_at).length
+    const duplicates = items.filter((i) => i.duplicateOf).length
+    return {
+      total,
+      reviewedPct: total ? Math.round((engaged / total) * 100) : 0,
+      unread: total - engaged,
+      duplicates,
+    }
+  }, [items])
 
-  const handleMarkForReview = async (id) => {
-    await fetch(`${API_URL}/api/items/${id}/tags`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tag: REVIEW_TAG }),
-    })
-    fetchItems()
-  }
+  const topCategories = useMemo(() => {
+    const counts = {}
+    for (const item of items) {
+      if (item.category) counts[item.category] = (counts[item.category] || 0) + 1
+    }
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+  }, [items])
+
+  const recentSaves = items.slice(0, 3)
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Your saved items</h2>
-          <p className="text-sm text-slate-500">{items.length} saved</p>
+          <h1 className="text-[24px] font-semibold tracking-tight text-text-primary sm:text-[30px]">
+            {greeting()}, {USER_FIRST_NAME} 👋
+          </h1>
+          <p className="text-body text-text-secondary">Let's make today productive.</p>
         </div>
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          <option value="">All categories</option>
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate('/library')}
+            className="rounded-xl border border-border-subtle bg-surface p-2.5 text-text-secondary hover:bg-muted"
+            title="Search your library"
+          >
+            <Search className="h-4 w-4" />
+          </button>
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="h-4 w-4" /> Add Content
+          </Button>
+        </div>
       </div>
 
-      {error && (
-        <p className="text-sm text-rose-600 bg-rose-50 rounded-lg px-3 py-2 mb-4">Error: {error}</p>
-      )}
-
-      {loading && (
-        <div className="flex flex-col gap-3">
+      {loading ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <SkeletonCard />
           <SkeletonCard />
         </div>
-      )}
-
-      {!loading && items.length === 0 && !error && (
-        <div className="text-center py-16 text-slate-400">
-          <p className="text-sm">Nothing saved yet.</p>
-          <p className="text-xs mt-1">Head to Ingest to save your first item.</p>
-        </div>
-      )}
-
-      <ul className="flex flex-col gap-3">
-        {items.map((item) => {
-          const isTaggedForReview = item.tags?.some((t) => t.tag === REVIEW_TAG)
-          return (
-            <li
-              key={item.id}
-              onClick={() => handleEngage(item.id)}
-              className="group cursor-pointer rounded-xl border border-slate-200 bg-white p-4 hover:border-indigo-300 hover:shadow-sm transition-all"
-            >
-              <div className="flex flex-wrap items-center gap-1.5 text-xs mb-2">
-                <span className="text-slate-400 font-medium uppercase tracking-wide text-[10px]">
-                  {SOURCE_LABELS[item.source_type] || item.source_type}
-                </span>
-                {item.category && (
-                  <span className={`rounded-full px-2 py-0.5 font-medium ${categoryColor(item.category)}`}>
-                    {item.category}
-                  </span>
-                )}
-                {item.subcategory && (
-                  <span className="rounded-full bg-slate-100 text-slate-600 px-2 py-0.5">
-                    {item.subcategory}
-                  </span>
-                )}
-                {isTaggedForReview && (
-                  <span className="rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 font-medium">
-                    review before mock
-                  </span>
-                )}
-                <span className="ml-auto text-slate-400">
-                  {new Date(item.created_at).toLocaleDateString()}
-                </span>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Card hover onClick={() => navigate('/review')}>
+              <p className="mb-3 text-caption font-medium text-text-secondary">Today's Review</p>
+              <div className="mb-3 flex items-baseline gap-2">
+                <span className="text-[30px] font-semibold text-text-primary">{resurfaceItems.length}</span>
+                <span className="text-body text-text-secondary">items to review</span>
               </div>
-
-              <p className="text-sm text-slate-800">
-                {item.summary || <span className="text-slate-400 italic">summary pending...</span>}
+              <p className="mb-4 text-caption text-text-secondary">
+                Estimated time: {resurfaceItems.length * 2} min
               </p>
+              <Button className="w-full justify-center" disabled={resurfaceItems.length === 0}>
+                Start Review
+              </Button>
+            </Card>
 
-              {!isTaggedForReview && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleMarkForReview(item.id)
-                  }}
-                  className="mt-2.5 text-xs font-medium text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity hover:underline"
-                >
-                  Mark for review before mock
+            <Card>
+              <p className="mb-3 text-caption font-medium text-text-secondary">Knowledge Health</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[24px] font-semibold text-text-primary">{stats.total}</p>
+                  <p className="text-caption text-text-secondary">Saved</p>
+                </div>
+                <div>
+                  <p className="text-[24px] font-semibold text-text-primary">{stats.reviewedPct}%</p>
+                  <p className="text-caption text-text-secondary">Reviewed</p>
+                </div>
+                <div>
+                  <p className="text-[24px] font-semibold text-text-primary">{stats.unread}</p>
+                  <p className="text-caption text-text-secondary">Unread</p>
+                </div>
+                <div>
+                  <p className="text-[24px] font-semibold text-warning">{stats.duplicates}</p>
+                  <p className="text-caption text-text-secondary">Duplicates</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Card>
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-caption font-medium text-text-secondary">Recent Saves</p>
+                <button onClick={() => navigate('/library')} className="text-caption text-primary hover:underline">
+                  View all
                 </button>
+              </div>
+              {recentSaves.length === 0 && (
+                <p className="text-sm text-text-secondary">Nothing saved yet.</p>
               )}
-            </li>
-          )
-        })}
-      </ul>
+              <ul className="flex flex-col gap-3">
+                {recentSaves.map((item) => (
+                  <li
+                    key={item.id}
+                    onClick={() => navigate(`/library/${item.id}`)}
+                    className="cursor-pointer rounded-xl px-2 py-1.5 hover:bg-muted"
+                  >
+                    <p className="truncate text-sm text-text-primary">{item.summary || item.source_type}</p>
+                    <CategoryChip category={item.category} />
+                  </li>
+                ))}
+              </ul>
+            </Card>
+
+            <Card>
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-caption font-medium text-text-secondary">Continue your last chat</p>
+                <button onClick={() => navigate('/chat')} className="text-caption text-primary hover:underline">
+                  View Chat
+                </button>
+              </div>
+              {chatHistory.length === 0 && (
+                <p className="text-sm text-text-secondary">Ask your vault something to get started.</p>
+              )}
+              <ul className="flex flex-col gap-3">
+                {chatHistory.slice(0, 2).map((q) => (
+                  <li
+                    key={q.id}
+                    onClick={() => navigate('/chat')}
+                    className="flex cursor-pointer items-start gap-2 rounded-xl px-2 py-1.5 hover:bg-muted"
+                  >
+                    <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-secondary" />
+                    <span className="min-w-0 flex-1 truncate text-sm text-text-primary">{q.query_text}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
+
+          {topCategories.length > 0 && (
+            <Card>
+              <p className="mb-3 text-caption font-medium text-text-secondary">Top Categories</p>
+              <div className="flex flex-wrap gap-2">
+                {topCategories.map(([cat, count]) => (
+                  <button
+                    key={cat}
+                    onClick={() => navigate('/library')}
+                    className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-caption text-text-secondary hover:bg-primary-light hover:text-primary"
+                  >
+                    {cat} <span className="font-medium">{count}</span>
+                  </button>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Content">
+        <Ingest
+          onSaved={() => {
+            setAddOpen(false)
+            fetchAll()
+          }}
+        />
+      </Modal>
     </div>
   )
 }

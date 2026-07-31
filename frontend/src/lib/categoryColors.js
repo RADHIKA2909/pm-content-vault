@@ -1,10 +1,13 @@
+// Deliberately restrained: the 4 core accent colors are reserved for the
+// categories that matter most in active prep; News/Other stay neutral so the
+// palette doesn't feel noisy across 6 categories.
 export const CATEGORY_COLORS = {
-  'Interview Questions': 'bg-indigo-50 text-indigo-700',
-  'Job Postings': 'bg-emerald-50 text-emerald-700',
-  'Application Tips': 'bg-amber-50 text-amber-700',
-  Frameworks: 'bg-sky-50 text-sky-700',
-  'Industry News': 'bg-rose-50 text-rose-700',
-  Other: 'bg-slate-100 text-slate-600',
+  'Interview Questions': 'bg-primary-light text-primary',
+  'Job Postings': 'bg-secondary/10 text-secondary',
+  'Application Tips': 'bg-warning/10 text-warning',
+  Frameworks: 'bg-success/10 text-success',
+  'Industry News': 'bg-muted text-text-secondary',
+  Other: 'bg-muted text-text-secondary',
 }
 
 export function categoryColor(category) {

@@ -4,6 +4,19 @@ import { embedText, generateGroundedAnswer } from '../services/gemini.js'
 
 const router = Router()
 
+// Recent past questions — powers the Dashboard's "Continue your last chat" card.
+router.get('/history', async (req, res) => {
+  const { data, error } = await supabase
+    .from('chat_queries')
+    .select('id, query_text, answer_text, created_at')
+    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.json(data)
+})
+
 // RAG chatbot: embed the query, pgvector similarity search (top-k) via the
 // match_embeddings function, then ask Gemini to answer grounded in those
 // chunks, with citations back to the source items.

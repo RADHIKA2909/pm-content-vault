@@ -3,7 +3,7 @@ import { API_URL } from '../lib/api.js'
 import StatusMessage from './StatusMessage.jsx'
 import UploadField from './UploadField.jsx'
 
-function IngestPdf() {
+function IngestPdf({ onSaved }) {
   const [status, setStatus] = useState(null)
 
   const handleFile = async (file) => {
@@ -24,6 +24,7 @@ function IngestPdf() {
       }
 
       setStatus({ type: 'success', message: 'Saved.' })
+      onSaved?.()
     } catch (err) {
       setStatus({ type: 'error', message: err.message })
     }
