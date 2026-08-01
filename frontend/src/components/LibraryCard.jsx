@@ -2,8 +2,11 @@ import { Star, ExternalLink, Trash2 } from 'lucide-react'
 import { CategoryChip, DuplicateChip } from './Chip.jsx'
 import SourceBadge from './SourceBadge.jsx'
 import SourceThumbnail from './SourceThumbnail.jsx'
+import { parseTitle } from '../lib/parseTitle.js'
 
 function LibraryCard({ item, isFavorite, onOpen, onToggleFavorite, onDelete }) {
+  const { title, subtitle } = parseTitle(item.title)
+
   return (
     <li
       onClick={() => onOpen(item.id)}
@@ -38,9 +41,16 @@ function LibraryCard({ item, isFavorite, onOpen, onToggleFavorite, onDelete }) {
           </span>
         </div>
 
-        <p className="truncate text-body font-semibold text-text-primary">
-          {item.title || item.summary || <span className="italic font-normal text-text-secondary">pending...</span>}
-        </p>
+        {title ? (
+          <>
+            <p className="truncate text-[17px] font-semibold text-text-primary">{title}</p>
+            {subtitle && <p className="mt-0.5 truncate text-caption text-text-secondary">{subtitle}</p>}
+          </>
+        ) : (
+          <p className="truncate text-body text-text-primary">
+            {item.summary || <span className="italic text-text-secondary">pending...</span>}
+          </p>
+        )}
 
         <div className="mt-3 flex items-center gap-3 opacity-0 transition-opacity group-hover:opacity-100">
           <button

@@ -10,6 +10,7 @@ import { CategoryChip, DuplicateChip, Chip } from '../components/Chip.jsx'
 import SourceBadge from '../components/SourceBadge.jsx'
 import { SkeletonCard } from '../components/Skeleton.jsx'
 import { FAVORITE_TAG } from './Library.jsx'
+import { parseTitle } from '../lib/parseTitle.js'
 
 function ItemDetail() {
   const { id } = useParams()
@@ -117,7 +118,8 @@ function ItemDetail() {
                     This looks like a duplicate ({Math.round(item.duplicateOf.similarity * 100)}% match)
                   </p>
                   <p className="mt-1 truncate text-sm text-text-secondary">
-                    Possibly the same as: {item.duplicateOf.title || item.duplicateOf.summary || 'another saved item'}
+                    Possibly the same as:{' '}
+                    {parseTitle(item.duplicateOf.title).title || item.duplicateOf.summary || 'another saved item'}
                   </p>
                   <div className="mt-3 flex items-center gap-3">
                     <Button variant="secondary" onClick={() => navigate(`/library/${item.duplicateOf.id}`)}>
@@ -257,7 +259,7 @@ function ItemDetail() {
                       to={`/library/${related.id}`}
                       className="block truncate text-sm text-text-primary hover:text-primary"
                     >
-                      {related.title || related.summary || related.source_type}
+                      {parseTitle(related.title).title || related.summary || related.source_type}
                     </Link>
                   </li>
                 ))}

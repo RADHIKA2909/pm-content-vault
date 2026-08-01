@@ -13,8 +13,11 @@ export async function enrichItem(item) {
   let categorization = {}
 
   try {
-    const { category, subcategory, summary, title } = await categorizeAndSummarize(textToProcess)
-    categorization = { category, subcategory, summary, title }
+    const { category, subcategory, summary, title, subtitle } = await categorizeAndSummarize(textToProcess)
+    // No spare column for a separate subtitle — pack "Title::subtitle" into
+    // the existing `title` text field and split it back apart on read.
+    const packedTitle = title && subtitle ? `${title}::${subtitle}` : title
+    categorization = { category, subcategory, summary, title: packedTitle }
     await supabase.from('items').update(categorization).eq('id', item.id)
   } catch (err) {
     console.error(`Categorization failed for item ${item.id}:`, err.message)

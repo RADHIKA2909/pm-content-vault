@@ -32,10 +32,11 @@ export async function categorizeAndSummarize(text) {
 Pick exactly one category from: ${CATEGORIES.join(', ')}.
 If the category is "Interview Questions", also pick one subcategory from: ${INTERVIEW_SUBCATEGORIES.join(', ')}. Otherwise return an empty string for subcategory.
 Write a 1-2 line summary of the content.
-Write a short title, 4-6 words, plain text (no punctuation at the end), that captures what this content is about at a glance — this is shown as a card label, not a sentence.
+Write a very short title, 1-2 words (2 only if needed for clarity, e.g. "RCA Framework"), plain text, no punctuation — a punchy topic label shown as a bold card heading, not a description.
+Write a short subtitle: a plain, lowercase-style phrase of AT MOST 5 SHORT words (prefer common short words over long ones), no trailing punctuation, that fits on one line without being cut off (e.g. "kpi trees and guesstimates" or "flowcharts for user navigation"). It must be short enough to read in full on a narrow card — do not write a sentence that needs truncating. Fewer words is better than more.
 
 Respond with ONLY raw JSON, no markdown fences, in exactly this shape:
-{"category": "...", "subcategory": "...", "summary": "...", "title": "..."}
+{"category": "...", "subcategory": "...", "summary": "...", "title": "...", "subtitle": "..."}
 
 Content:
 """
@@ -62,6 +63,7 @@ ${text}
     subcategory: parsed.subcategory || null,
     summary: parsed.summary || null,
     title: parsed.title || null,
+    subtitle: parsed.subtitle || null,
   }
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Plus, MessageSquare, Star } from 'lucide-react'
 import { API_URL } from '../lib/api.js'
+import { parseTitle } from '../lib/parseTitle.js'
 import Card from '../components/Card.jsx'
 import Button from '../components/Button.jsx'
 import Modal from '../components/Modal.jsx'
@@ -186,7 +187,7 @@ function Dashboard() {
                   className="cursor-pointer rounded-xl px-2 py-1.5 hover:bg-muted"
                 >
                   <p className="truncate text-sm font-semibold text-text-primary">
-                    {item.title || item.summary || item.source_type}
+                    {parseTitle(item.title).title || item.summary || item.source_type}
                   </p>
                   <CategoryChip category={item.category} />
                 </li>
