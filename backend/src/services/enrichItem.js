@@ -13,8 +13,8 @@ export async function enrichItem(item) {
   let categorization = {}
 
   try {
-    const { category, subcategory, summary } = await categorizeAndSummarize(textToProcess)
-    categorization = { category, subcategory, summary }
+    const { category, subcategory, summary, title } = await categorizeAndSummarize(textToProcess)
+    categorization = { category, subcategory, summary, title }
     await supabase.from('items').update(categorization).eq('id', item.id)
   } catch (err) {
     console.error(`Categorization failed for item ${item.id}:`, err.message)

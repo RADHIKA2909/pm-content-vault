@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, MessageSquare } from 'lucide-react'
+import { Search, Plus, MessageSquare, Star } from 'lucide-react'
 import { API_URL } from '../lib/api.js'
 import Card from '../components/Card.jsx'
 import Button from '../components/Button.jsx'
@@ -8,6 +8,9 @@ import Modal from '../components/Modal.jsx'
 import { CategoryChip } from '../components/Chip.jsx'
 import { SkeletonCard } from '../components/Skeleton.jsx'
 import Ingest from './Ingest.jsx'
+import { FAVORITE_TAG } from './Library.jsx'
+import FavoritesDecoration from '../components/decorations/FavoritesDecoration.jsx'
+import KnowledgeHealthDecoration from '../components/decorations/KnowledgeHealthDecoration.jsx'
 
 // Personalization touch for this single-user v0 tool — swap for a real
 // profile name once Supabase Auth login exists.
@@ -22,7 +25,6 @@ function greeting() {
 
 function Dashboard() {
   const [items, setItems] = useState([])
-  const [resurfaceItems, setResurfaceItems] = useState([])
   const [chatHistory, setChatHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [addOpen, setAddOpen] = useState(false)
@@ -31,13 +33,11 @@ function Dashboard() {
   const fetchAll = async () => {
     setLoading(true)
     try {
-      const [itemsRes, resurfaceRes, historyRes] = await Promise.all([
+      const [itemsRes, historyRes] = await Promise.all([
         fetch(`${API_URL}/api/items`),
-        fetch(`${API_URL}/api/resurface`),
         fetch(`${API_URL}/api/chat/history`),
       ])
       setItems(await itemsRes.json())
-      setResurfaceItems(await resurfaceRes.json())
       setChatHistory(await historyRes.json())
     } finally {
       setLoading(false)
@@ -48,14 +48,19 @@ function Dashboard() {
     fetchAll()
   }, [])
 
+  const favoriteCount = useMemo(
+    () => items.filter((i) => i.tags?.some((t) => t.tag === FAVORITE_TAG)).length,
+    [items],
+  )
+
   const stats = useMemo(() => {
     const total = items.length
     const engaged = items.filter((i) => i.last_engaged_at).length
     const duplicates = items.filter((i) => i.duplicateOf).length
     return {
       total,
-      reviewedPct: total ? Math.round((engaged / total) * 100) : 0,
-      unread: total - engaged,
+      openedPct: total ? Math.round((engaged / total) * 100) : 0,
+      unopened: total - engaged,
       duplicates,
     }
   }, [items])
@@ -96,28 +101,29 @@ function Dashboard() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Card hover onClick={() => navigate('/review')}>
-              <p className="mb-3 text-caption font-medium text-text-secondary">Today's Review</p>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <Card hover onClick={() => navigate('/favorites')} className="relative overflow-hidden">
+              <FavoritesDecoration />
+              <p className="mb-3 text-caption font-medium text-text-secondary">Favorites</p>
               <div className="mb-3 flex items-baseline gap-2">
-                <span className="text-[30px] font-semibold text-text-primary">{resurfaceItems.length}</span>
-                <span className="text-body text-text-secondary">items to review</span>
+                <span className="text-[30px] font-semibold text-text-primary">{favoriteCount}</span>
+                <span className="text-body text-text-secondary">starred items</span>
               </div>
-              <p className="mb-4 text-caption text-text-secondary">
-                Estimated time: {resurfaceItems.length * 2} min
-              </p>
-              <Button className="w-full justify-center" disabled={resurfaceItems.length === 0}>
-                Start Review
+              <p className="mb-4 text-caption text-text-secondary">Quick access to what matters most</p>
+              <Button className="w-full justify-center">
+                <Star className="h-4 w-4" /> View Favorites
               </Button>
             </Card>
 
-            <Card>
+            <Card className="relative overflow-hidden">
+              <KnowledgeHealthDecoration />
               <p className="mb-3 text-caption font-medium text-text-secondary">Knowledge Health</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -125,44 +131,18 @@ function Dashboard() {
                   <p className="text-caption text-text-secondary">Saved</p>
                 </div>
                 <div>
-                  <p className="text-[24px] font-semibold text-text-primary">{stats.reviewedPct}%</p>
-                  <p className="text-caption text-text-secondary">Reviewed</p>
+                  <p className="text-[24px] font-semibold text-text-primary">{stats.openedPct}%</p>
+                  <p className="text-caption text-text-secondary">Opened</p>
                 </div>
                 <div>
-                  <p className="text-[24px] font-semibold text-text-primary">{stats.unread}</p>
-                  <p className="text-caption text-text-secondary">Unread</p>
+                  <p className="text-[24px] font-semibold text-text-primary">{stats.unopened}</p>
+                  <p className="text-caption text-text-secondary">Unopened</p>
                 </div>
                 <div>
                   <p className="text-[24px] font-semibold text-warning">{stats.duplicates}</p>
                   <p className="text-caption text-text-secondary">Duplicates</p>
                 </div>
               </div>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Card>
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-caption font-medium text-text-secondary">Recent Saves</p>
-                <button onClick={() => navigate('/library')} className="text-caption text-primary hover:underline">
-                  View all
-                </button>
-              </div>
-              {recentSaves.length === 0 && (
-                <p className="text-sm text-text-secondary">Nothing saved yet.</p>
-              )}
-              <ul className="flex flex-col gap-3">
-                {recentSaves.map((item) => (
-                  <li
-                    key={item.id}
-                    onClick={() => navigate(`/library/${item.id}`)}
-                    className="cursor-pointer rounded-xl px-2 py-1.5 hover:bg-muted"
-                  >
-                    <p className="truncate text-sm text-text-primary">{item.summary || item.source_type}</p>
-                    <CategoryChip category={item.category} />
-                  </li>
-                ))}
-              </ul>
             </Card>
 
             <Card>
@@ -176,10 +156,10 @@ function Dashboard() {
                 <p className="text-sm text-text-secondary">Ask your vault something to get started.</p>
               )}
               <ul className="flex flex-col gap-3">
-                {chatHistory.slice(0, 2).map((q) => (
+                {chatHistory.slice(0, 3).map((q) => (
                   <li
                     key={q.id}
-                    onClick={() => navigate('/chat')}
+                    onClick={() => navigate('/chat', { state: { resume: q } })}
                     className="flex cursor-pointer items-start gap-2 rounded-xl px-2 py-1.5 hover:bg-muted"
                   >
                     <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-secondary" />
@@ -189,6 +169,30 @@ function Dashboard() {
               </ul>
             </Card>
           </div>
+
+          <Card>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-caption font-medium text-text-secondary">Recent Saves</p>
+              <button onClick={() => navigate('/library')} className="text-caption text-primary hover:underline">
+                View all
+              </button>
+            </div>
+            {recentSaves.length === 0 && <p className="text-sm text-text-secondary">Nothing saved yet.</p>}
+            <ul className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {recentSaves.map((item) => (
+                <li
+                  key={item.id}
+                  onClick={() => navigate(`/library/${item.id}`)}
+                  className="cursor-pointer rounded-xl px-2 py-1.5 hover:bg-muted"
+                >
+                  <p className="truncate text-sm font-semibold text-text-primary">
+                    {item.title || item.summary || item.source_type}
+                  </p>
+                  <CategoryChip category={item.category} />
+                </li>
+              ))}
+            </ul>
+          </Card>
 
           {topCategories.length > 0 && (
             <Card>

@@ -8,7 +8,7 @@ const router = Router()
 router.get('/history', async (req, res) => {
   const { data, error } = await supabase
     .from('chat_queries')
-    .select('id, query_text, answer_text, created_at')
+    .select('id, query_text, answer_text, cited_item_ids, created_at')
     .eq('user_id', process.env.DEFAULT_USER_ID)
     .order('created_at', { ascending: false })
     .limit(5)
@@ -77,7 +77,7 @@ router.post('/', async (req, res) => {
       user_id: userId,
       query_text: query,
       answer_text: answer,
-      cited_item_ids: [...new Set(matches.map((m) => m.item_id))],
+      cited_item_ids: itemIds,
     })
 
     res.json({ answer, citations })

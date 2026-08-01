@@ -24,10 +24,13 @@ function IngestImage({ onSaved }) {
 
       setStatus({ type: 'pending', message: 'Saving...' })
 
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('text', text)
+
       const res = await fetch(`${API_URL}/api/items/image`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, filename: file.name }),
+        body: formData,
       })
 
       if (!res.ok) {

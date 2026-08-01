@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Bookmark, ExternalLink } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { API_URL } from '../lib/api.js'
 import { useToast } from '../components/ToastContext.jsx'
-import Card from '../components/Card.jsx'
-import { CategoryChip, DuplicateChip } from '../components/Chip.jsx'
-import SourceBadge from '../components/SourceBadge.jsx'
+import LibraryCard from '../components/LibraryCard.jsx'
+import ConfirmModal from '../components/ConfirmModal.jsx'
 import { SkeletonCard } from '../components/Skeleton.jsx'
 
 const CATEGORIES = [
@@ -17,7 +16,7 @@ const CATEGORIES = [
   'Other',
 ]
 
-const REVIEW_TAG = 'review before mock'
+export const FAVORITE_TAG = 'favorite'
 
 function Library() {
   const [items, setItems] = useState([])
@@ -26,6 +25,7 @@ function Library() {
   const [sort, setSort] = useState('newest')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState(null)
   const navigate = useNavigate()
   const { showToast } = useToast()
 
@@ -65,6 +65,7 @@ function Library() {
       const q = search.trim().toLowerCase()
       result = result.filter(
         (item) =>
+          item.title?.toLowerCase().includes(q) ||
           item.summary?.toLowerCase().includes(q) ||
           item.category?.toLowerCase().includes(q) ||
           item.raw_content?.toLowerCase().includes(q),
@@ -78,15 +79,21 @@ function Library() {
     )
   }, [items, category, search, sort])
 
-  const handleMarkForReview = async (e, id) => {
-    e.stopPropagation()
+  const handleToggleFavorite = async (id, isFavorite) => {
     await fetch(`${API_URL}/api/items/${id}/tags`, {
-      method: 'POST',
+      method: isFavorite ? 'DELETE' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tag: REVIEW_TAG }),
+      body: JSON.stringify({ tag: FAVORITE_TAG }),
     })
-    showToast('Marked for review before mock')
+    showToast(isFavorite ? 'Removed from favorites' : 'Added to favorites')
     fetchItems()
+  }
+
+  const handleDelete = async () => {
+    const id = pendingDeleteId
+    await fetch(`${API_URL}/api/items/${id}`, { method: 'DELETE' })
+    setItems((prev) => prev.filter((i) => i.id !== id))
+    showToast('Item deleted')
   }
 
   return (
@@ -98,7 +105,7 @@ function Library() {
         </div>
       </div>
 
-      <div className="mb-6 flex flex-col gap-4 md:flex-row">
+      <div className="flex flex-col gap-4 md:flex-row">
         <aside className="shrink-0 md:w-48">
           <div className="flex flex-col gap-0.5">
             <button
@@ -149,7 +156,7 @@ function Library() {
           )}
 
           {loading && (
-            <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
               <SkeletonCard />
               <SkeletonCard />
             </div>
@@ -163,60 +170,28 @@ function Library() {
             </div>
           )}
 
-          <ul className="flex flex-col gap-3">
-            {visibleItems.map((item) => {
-              const isTaggedForReview = item.tags?.some((t) => t.tag === REVIEW_TAG)
-              return (
-                <Card
-                  key={item.id}
-                  as="li"
-                  hover
-                  onClick={() => navigate(`/library/${item.id}`)}
-                  className="group"
-                >
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <SourceBadge sourceType={item.source_type} />
-                    <CategoryChip category={item.category} />
-                    {isTaggedForReview && (
-                      <span className="rounded-full bg-warning/10 px-2.5 py-0.5 text-caption font-medium text-warning">
-                        review before mock
-                      </span>
-                    )}
-                    {item.duplicateOf && <DuplicateChip similarity={item.duplicateOf.similarity} />}
-                    <span className="ml-auto text-caption text-text-secondary">
-                      {new Date(item.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  <p className="text-body text-text-primary">
-                    {item.summary || <span className="italic text-text-secondary">summary pending...</span>}
-                  </p>
-
-                  <div className="mt-3 flex items-center gap-3 opacity-0 transition-opacity group-hover:opacity-100">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        navigate(`/library/${item.id}`)
-                      }}
-                      className="flex items-center gap-1 text-caption font-medium text-primary hover:underline"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" /> Open
-                    </button>
-                    {!isTaggedForReview && (
-                      <button
-                        onClick={(e) => handleMarkForReview(e, item.id)}
-                        className="flex items-center gap-1 text-caption font-medium text-text-secondary hover:text-primary"
-                      >
-                        <Bookmark className="h-3.5 w-3.5" /> Mark for review
-                      </button>
-                    )}
-                  </div>
-                </Card>
-              )
-            })}
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+            {visibleItems.map((item) => (
+              <LibraryCard
+                key={item.id}
+                item={item}
+                isFavorite={item.tags?.some((t) => t.tag === FAVORITE_TAG)}
+                onOpen={(id) => navigate(`/library/${id}`)}
+                onToggleFavorite={handleToggleFavorite}
+                onDelete={(id) => setPendingDeleteId(id)}
+              />
+            ))}
           </ul>
         </div>
       </div>
+
+      <ConfirmModal
+        open={pendingDeleteId !== null}
+        onClose={() => setPendingDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete this item?"
+        description="This permanently removes the item, its summary, embedding, and any tags. This can't be undone."
+      />
     </div>
   )
 }

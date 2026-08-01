@@ -1,15 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, Bookmark, ExternalLink, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Star, ExternalLink, ChevronDown, Trash2, Copy } from 'lucide-react'
 import { API_URL } from '../lib/api.js'
 import { useToast } from '../components/ToastContext.jsx'
 import Card from '../components/Card.jsx'
 import Button from '../components/Button.jsx'
+import ConfirmModal from '../components/ConfirmModal.jsx'
 import { CategoryChip, DuplicateChip, Chip } from '../components/Chip.jsx'
 import SourceBadge from '../components/SourceBadge.jsx'
 import { SkeletonCard } from '../components/Skeleton.jsx'
-
-const REVIEW_TAG = 'review before mock'
+import { FAVORITE_TAG } from './Library.jsx'
 
 function ItemDetail() {
   const { id } = useParams()
@@ -18,6 +18,8 @@ function ItemDetail() {
   const [item, setItem] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showOriginal, setShowOriginal] = useState(false)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+  const engagedIdRef = useRef(null)
 
   const fetchItem = async () => {
     setLoading(true)
@@ -31,20 +33,29 @@ function ItemDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
-  const handleMarkReviewed = async () => {
-    await fetch(`${API_URL}/api/items/${id}/engage`, { method: 'PATCH' })
-    showToast('Marked as reviewed')
+  // Viewing an item counts as engaging with it — no separate "mark
+  // reviewed" action needed. Guard against re-firing on every re-render.
+  useEffect(() => {
+    if (!item || engagedIdRef.current === item.id) return
+    engagedIdRef.current = item.id
+    fetch(`${API_URL}/api/items/${item.id}/engage`, { method: 'PATCH' })
+  }, [item])
+
+  const handleToggleFavorite = async () => {
+    const isFavorite = item.tags?.some((t) => t.tag === FAVORITE_TAG)
+    await fetch(`${API_URL}/api/items/${id}/tags`, {
+      method: isFavorite ? 'DELETE' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tag: FAVORITE_TAG }),
+    })
+    showToast(isFavorite ? 'Removed from favorites' : 'Added to favorites')
     fetchItem()
   }
 
-  const handleMarkForReview = async () => {
-    await fetch(`${API_URL}/api/items/${id}/tags`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tag: REVIEW_TAG }),
-    })
-    showToast('Marked for review before mock')
-    fetchItem()
+  const handleDelete = async () => {
+    await fetch(`${API_URL}/api/items/${id}`, { method: 'DELETE' })
+    showToast('Item deleted')
+    navigate('/library')
   }
 
   if (loading) {
@@ -66,7 +77,7 @@ function ItemDetail() {
     )
   }
 
-  const isTaggedForReview = item.tags?.some((t) => t.tag === REVIEW_TAG)
+  const isFavorite = item.tags?.some((t) => t.tag === FAVORITE_TAG)
 
   return (
     <div>
@@ -87,16 +98,39 @@ function ItemDetail() {
               {item.duplicateOf && <DuplicateChip similarity={item.duplicateOf.similarity} />}
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={handleMarkReviewed}>
-                <CheckCircle2 className="h-4 w-4" /> Mark Reviewed
+              <Button variant="secondary" onClick={handleToggleFavorite}>
+                <Star className={`h-4 w-4 ${isFavorite ? 'fill-accent text-accent' : ''}`} />
+                {isFavorite ? 'Favorited' : 'Add to Favorites'}
               </Button>
-              {!isTaggedForReview && (
-                <Button variant="ghost" onClick={handleMarkForReview}>
-                  <Bookmark className="h-4 w-4" /> Review before mock
-                </Button>
-              )}
+              <Button variant="ghost" onClick={() => setConfirmDeleteOpen(true)}>
+                <Trash2 className="h-4 w-4" /> Delete
+              </Button>
             </div>
           </div>
+
+          {item.duplicateOf && (
+            <Card className="mb-4 border-warning/30 bg-warning/5">
+              <div className="flex items-start gap-3">
+                <Copy className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-text-primary">
+                    This looks like a duplicate ({Math.round(item.duplicateOf.similarity * 100)}% match)
+                  </p>
+                  <p className="mt-1 truncate text-sm text-text-secondary">
+                    Possibly the same as: {item.duplicateOf.title || item.duplicateOf.summary || 'another saved item'}
+                  </p>
+                  <div className="mt-3 flex items-center gap-3">
+                    <Button variant="secondary" onClick={() => navigate(`/library/${item.duplicateOf.id}`)}>
+                      View Original
+                    </Button>
+                    <Button variant="ghost" onClick={() => setConfirmDeleteOpen(true)}>
+                      <Trash2 className="h-4 w-4" /> Delete this duplicate
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
 
           <Card className="mb-4">
             <p className="mb-2 text-caption font-medium uppercase tracking-wide text-text-secondary">
@@ -122,7 +156,7 @@ function ItemDetail() {
 
             {showOriginal && (
               <div className="mt-3">
-                {item.source_type === 'link' ? (
+                {item.source_type === 'link' && (
                   <a
                     href={item.raw_content}
                     target="_blank"
@@ -131,7 +165,44 @@ function ItemDetail() {
                   >
                     <ExternalLink className="h-3.5 w-3.5" /> {item.raw_content}
                   </a>
-                ) : (
+                )}
+
+                {item.source_type === 'image' && (
+                  <div className="flex flex-col gap-3">
+                    {item.file_url ? (
+                      <img
+                        src={item.file_url}
+                        alt="Original upload"
+                        className="max-h-96 w-auto rounded-xl border border-border-subtle object-contain"
+                      />
+                    ) : (
+                      <p className="text-caption italic text-text-secondary">
+                        Original image not stored for this item (saved before file storage was added).
+                      </p>
+                    )}
+                    {item.extracted_text && (
+                      <p className="whitespace-pre-wrap text-sm text-text-secondary">{item.extracted_text}</p>
+                    )}
+                  </div>
+                )}
+
+                {item.source_type === 'pdf' &&
+                  (item.file_url ? (
+                    <a
+                      href={item.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-sm text-primary hover:underline"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" /> Open original PDF
+                    </a>
+                  ) : (
+                    <p className="text-caption italic text-text-secondary">
+                      Original PDF not stored for this item (saved before file storage was added).
+                    </p>
+                  ))}
+
+                {(item.source_type === 'linkedin_paste' || item.source_type === 'whatsapp_export') && (
                   <p className="whitespace-pre-wrap text-sm text-text-secondary">
                     {item.extracted_text || item.raw_content || 'No content stored.'}
                   </p>
@@ -186,7 +257,7 @@ function ItemDetail() {
                       to={`/library/${related.id}`}
                       className="block truncate text-sm text-text-primary hover:text-primary"
                     >
-                      {related.summary || related.source_type}
+                      {related.title || related.summary || related.source_type}
                     </Link>
                   </li>
                 ))}
@@ -195,6 +266,14 @@ function ItemDetail() {
           )}
         </aside>
       </div>
+
+      <ConfirmModal
+        open={confirmDeleteOpen}
+        onClose={() => setConfirmDeleteOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete this item?"
+        description="This permanently removes the item, its summary, embedding, and any tags. This can't be undone."
+      />
     </div>
   )
 }

@@ -7,10 +7,12 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#6366F1',
-          hover: '#5458E8',
-          light: '#EEF2FF',
+          DEFAULT: '#3B5FE3',
+          hover: '#2F4FC4',
+          light: '#EAF0FE',
         },
+        accent: '#F97316',
+        'accent-light': '#FFF1E6',
         secondary: '#14B8A6',
         warning: '#F59E0B',
         success: '#10B981',
@@ -18,7 +20,7 @@ export default {
         'text-primary': '#1F2937',
         'text-secondary': '#6B7280',
         surface: '#FFFFFF',
-        'bg-app': '#FAFAFC',
+        'bg-app': '#FCFCFD',
         muted: '#F4F5F8',
       },
       fontFamily: {

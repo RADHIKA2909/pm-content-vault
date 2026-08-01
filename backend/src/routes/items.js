@@ -5,6 +5,7 @@ import { insertItem, insertItems } from '../services/itemsRepo.js'
 import { extractFromUrl } from '../services/linkExtractor.js'
 import { parseWhatsappExport } from '../services/whatsappParser.js'
 import { enrichItem } from '../services/enrichItem.js'
+import { uploadFile } from '../services/fileStorage.js'
 import supabase from '../services/supabaseClient.js'
 
 const router = Router()
@@ -20,7 +21,7 @@ router.get('/', async (req, res) => {
   let query = supabase
     .from('items')
     .select(
-      'id, source_type, raw_content, summary, category, subcategory, created_at, last_engaged_at, tags(tag)',
+      'id, source_type, raw_content, file_url, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag)',
     )
     .eq('user_id', process.env.DEFAULT_USER_ID)
     .order('created_at', { ascending: false })
@@ -43,23 +44,25 @@ router.get('/', async (req, res) => {
 
   const missingOriginalIds = originalIds.filter((id) => !data.some((item) => item.id === id))
   const { data: missingOriginals } = missingOriginalIds.length
-    ? await supabase.from('items').select('id, summary').in('id', missingOriginalIds)
+    ? await supabase.from('items').select('id, title, summary').in('id', missingOriginalIds)
     : { data: [] }
 
-  const summaryById = new Map([
-    ...data.map((item) => [item.id, item.summary]),
-    ...(missingOriginals || []).map((item) => [item.id, item.summary]),
+  const infoById = new Map([
+    ...data.map((item) => [item.id, { title: item.title, summary: item.summary }]),
+    ...(missingOriginals || []).map((item) => [item.id, { title: item.title, summary: item.summary }]),
   ])
 
   const withDuplicateFlags = data.map((item) => {
     const dup = duplicateByItemId.get(item.id)
     if (!dup) return item
 
+    const original = infoById.get(dup.duplicate_of_item_id)
     return {
       ...item,
       duplicateOf: {
         id: dup.duplicate_of_item_id,
-        summary: summaryById.get(dup.duplicate_of_item_id) || null,
+        title: original?.title || null,
+        summary: original?.summary || null,
         similarity: dup.similarity_score,
       },
     }
@@ -77,7 +80,7 @@ router.get('/:id', async (req, res) => {
   const { data: item, error } = await supabase
     .from('items')
     .select(
-      'id, source_type, raw_content, extracted_text, summary, category, subcategory, created_at, last_engaged_at, tags(tag)',
+      'id, source_type, raw_content, extracted_text, file_url, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag)',
     )
     .eq('id', id)
     .eq('user_id', userId)
@@ -100,10 +103,15 @@ router.get('/:id', async (req, res) => {
   if (asDuplicate) {
     const { data: original } = await supabase
       .from('items')
-      .select('id, summary')
+      .select('id, title, summary')
       .eq('id', asDuplicate.duplicate_of_item_id)
       .single()
-    duplicateOf = { id: original?.id, summary: original?.summary, similarity: asDuplicate.similarity_score }
+    duplicateOf = {
+      id: original?.id,
+      title: original?.title,
+      summary: original?.summary,
+      similarity: asDuplicate.similarity_score,
+    }
   }
 
   let relatedItems = []
@@ -120,7 +128,7 @@ router.get('/:id', async (req, res) => {
     if (uniqueRelatedIds.length) {
       const { data: relatedRows } = await supabase
         .from('items')
-        .select('id, summary, category, source_type, created_at')
+        .select('id, title, summary, category, source_type, created_at')
         .in('id', uniqueRelatedIds)
       relatedItems = relatedRows || []
     }
@@ -177,20 +185,28 @@ router.post('/link', async (req, res) => {
   }
 })
 
-// Image OCR — OCR runs client-side (Tesseract.js); backend just saves the
-// resulting text. The image binary itself is not stored in v0.
-router.post('/image', async (req, res) => {
-  const { text, filename } = req.body
+// Image OCR — OCR runs client-side (Tesseract.js) and the resulting text
+// is sent alongside the original image file, which is stored so the user
+// can view the exact image they saved later.
+router.post('/image', upload.single('file'), async (req, res) => {
+  const { text } = req.body
 
+  if (!req.file) {
+    return res.status(400).json({ error: 'file is required' })
+  }
   if (!text || !text.trim()) {
     return res.status(400).json({ error: 'text (OCR result) is required' })
   }
 
   try {
+    const extension = req.file.originalname.split('.').pop() || 'png'
+    const fileUrl = await uploadFile(req.file.buffer, extension, req.file.mimetype)
+
     const item = await insertItem({
       sourceType: 'image',
-      rawContent: filename || null,
+      rawContent: req.file.originalname,
       extractedText: text,
+      fileUrl,
     })
     const enrichment = await enrichItem(item)
     res.status(201).json({ ...item, ...enrichment })
@@ -207,10 +223,13 @@ router.post('/pdf', upload.single('file'), async (req, res) => {
 
   try {
     const parsed = await pdfParse(req.file.buffer)
+    const fileUrl = await uploadFile(req.file.buffer, 'pdf', 'application/pdf')
+
     const item = await insertItem({
       sourceType: 'pdf',
       rawContent: req.file.originalname,
       extractedText: parsed.text.slice(0, 20000),
+      fileUrl,
     })
     const enrichment = await enrichItem(item)
     res.status(201).json({ ...item, ...enrichment })
@@ -251,7 +270,7 @@ router.post('/whatsapp', async (req, res) => {
   }
 })
 
-// Tag an item (used for the "review before mock" priority flag).
+// Tag an item (used for favorites and other free-form tags).
 router.post('/:id/tags', async (req, res) => {
   const { id } = req.params
   const { tag } = req.body
@@ -270,6 +289,27 @@ router.post('/:id/tags', async (req, res) => {
   res.status(201).json(data)
 })
 
+// Remove a specific tag from an item (e.g. un-favoriting
+// once it's actually been reviewed).
+router.delete('/:id/tags', async (req, res) => {
+  const { id } = req.params
+  const { tag } = req.body
+
+  if (!tag || !tag.trim()) {
+    return res.status(400).json({ error: 'tag is required' })
+  }
+
+  const { error } = await supabase
+    .from('tags')
+    .delete()
+    .eq('item_id', id)
+    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .eq('tag', tag.trim())
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.status(204).end()
+})
+
 // Marks an item as engaged-with (viewed/revisited), resetting the
 // resurfacing widget's 14-day idle clock for it.
 router.patch('/:id/engage', async (req, res) => {
@@ -284,6 +324,21 @@ router.patch('/:id/engage', async (req, res) => {
 
   if (error) return res.status(500).json({ error: error.message })
   res.json(data)
+})
+
+// Deletes an item permanently. embeddings/tags/duplicates rows referencing
+// it are removed automatically via the schema's ON DELETE CASCADE.
+router.delete('/:id', async (req, res) => {
+  const { id } = req.params
+
+  const { error } = await supabase
+    .from('items')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', process.env.DEFAULT_USER_ID)
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.status(204).end()
 })
 
 export default router

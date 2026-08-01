@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { ChevronDown, SendHorizontal } from 'lucide-react'
 import { API_URL } from '../lib/api.js'
@@ -70,10 +70,40 @@ function Chat() {
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
+  const location = useLocation()
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  // Resume a past question from Dashboard's "Continue your last chat" —
+  // rehydrate from what's already stored instead of re-asking Gemini.
+  useEffect(() => {
+    const resume = location.state?.resume
+    if (!resume) return
+
+    const hydrate = async () => {
+      let citations = []
+      if (resume.cited_item_ids?.length) {
+        const res = await fetch(`${API_URL}/api/items`)
+        const allItems = res.ok ? await res.json() : []
+        citations = resume.cited_item_ids
+          .map((id, i) => {
+            const item = allItems.find((it) => it.id === id)
+            return item ? { index: i + 1, item, chunk_text: item.summary || '' } : null
+          })
+          .filter(Boolean)
+      }
+
+      setMessages([
+        { role: 'user', text: resume.query_text },
+        { role: 'assistant', text: resume.answer_text, citations },
+      ])
+    }
+
+    hydrate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state])
 
   const ask = async (text) => {
     if (!text.trim()) return

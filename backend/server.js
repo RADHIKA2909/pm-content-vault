@@ -2,7 +2,6 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import itemsRouter from './src/routes/items.js'
-import resurfaceRouter from './src/routes/resurface.js'
 import chatRouter from './src/routes/chat.js'
 
 const app = express()
@@ -14,7 +13,6 @@ app.get('/health', (req, res) => {
 })
 
 app.use('/api/items', itemsRouter)
-app.use('/api/resurface', resurfaceRouter)
 app.use('/api/chat', chatRouter)
 
 const PORT = process.env.PORT || 3001

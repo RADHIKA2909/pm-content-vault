@@ -14,7 +14,7 @@ export function DuplicateChip({ similarity }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-0.5 text-caption font-medium text-warning">
       <Copy className="h-3 w-3" />
-      {Math.round(similarity * 100)}% similar
+      {Math.round(similarity * 100)}%
     </span>
   )
 }

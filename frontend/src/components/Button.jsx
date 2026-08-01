@@ -2,6 +2,7 @@ const VARIANTS = {
   primary: 'bg-primary text-white hover:bg-primary-hover',
   secondary: 'bg-white text-text-primary border border-border-subtle hover:bg-muted',
   ghost: 'text-text-secondary hover:bg-muted hover:text-text-primary',
+  danger: 'bg-warning text-white hover:opacity-90',
 }
 
 function Button({ children, variant = 'primary', className = '', ...props }) {

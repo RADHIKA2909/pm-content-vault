@@ -32,9 +32,10 @@ export async function categorizeAndSummarize(text) {
 Pick exactly one category from: ${CATEGORIES.join(', ')}.
 If the category is "Interview Questions", also pick one subcategory from: ${INTERVIEW_SUBCATEGORIES.join(', ')}. Otherwise return an empty string for subcategory.
 Write a 1-2 line summary of the content.
+Write a short title, 4-6 words, plain text (no punctuation at the end), that captures what this content is about at a glance — this is shown as a card label, not a sentence.
 
 Respond with ONLY raw JSON, no markdown fences, in exactly this shape:
-{"category": "...", "subcategory": "...", "summary": "..."}
+{"category": "...", "subcategory": "...", "summary": "...", "title": "..."}
 
 Content:
 """
@@ -60,6 +61,7 @@ ${text}
     category: parsed.category || 'Other',
     subcategory: parsed.subcategory || null,
     summary: parsed.summary || null,
+    title: parsed.title || null,
   }
 }
 

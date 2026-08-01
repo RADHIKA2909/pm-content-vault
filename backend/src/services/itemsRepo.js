@@ -1,6 +1,6 @@
 import supabase from './supabaseClient.js'
 
-export async function insertItem({ sourceType, rawContent, extractedText }) {
+export async function insertItem({ sourceType, rawContent, extractedText, fileUrl }) {
   const { data, error } = await supabase
     .from('items')
     .insert({
@@ -8,6 +8,7 @@ export async function insertItem({ sourceType, rawContent, extractedText }) {
       source_type: sourceType,
       raw_content: rawContent,
       extracted_text: extractedText,
+      file_url: fileUrl || null,
     })
     .select()
     .single()
