@@ -5,6 +5,9 @@ import { insertItem, insertItems } from '../services/itemsRepo.js'
 import { extractFromUrl, fetchPageImage } from '../services/linkExtractor.js'
 import { parseWhatsappExport } from '../services/whatsappParser.js'
 import { enrichItem } from '../services/enrichItem.js'
+import { CATEGORIES, embedText, generateGroundedAnswer } from '../services/gemini.js'
+import { sanitizeCitations, referencedIndexes } from '../services/citations.js'
+import { loadVaultIndex } from '../services/vaultIndex.js'
 import { uploadFile } from '../services/fileStorage.js'
 import { sanitizeNoteHtml, noteHtmlToText, firstImageUrl, firstLinkUrl } from '../services/noteContent.js'
 import supabase from '../services/supabaseClient.js'
@@ -15,6 +18,89 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 
 // v0: no auth yet, so every item is saved under the fixed DEFAULT_USER_ID
 // (see services/itemsRepo.js).
 
+function normalizeLabel(value) {
+  return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : ''
+}
+
+// An item carries between one and three categories. The cap keeps cards
+// readable; the floor means nothing is ever left unfiled.
+const MAX_CATEGORIES = 3
+const FALLBACK_CATEGORY = 'Other'
+
+// Accepts a real array (JSON routes) or a JSON string (multipart forms, which
+// can only carry strings).
+function parseCategories(categories) {
+  const raw = Array.isArray(categories)
+    ? categories
+    : (() => {
+        if (typeof categories !== 'string' || !categories.trim()) return []
+        try {
+          const parsed = JSON.parse(categories)
+          return Array.isArray(parsed) ? parsed : []
+        } catch {
+          return categories.split(',')
+        }
+      })()
+
+  // De-duplicated case-insensitively, so "Mock Prep" and "mock prep" can't both
+  // land on the same item.
+  const seen = new Set()
+  return raw
+    .map(normalizeLabel)
+    .filter((c) => c && !seen.has(c.toLowerCase()) && seen.add(c.toLowerCase()))
+    .slice(0, MAX_CATEGORIES)
+}
+
+/**
+ * Replaces an item's categories wholesale, and mirrors the first one onto
+ * items.category. That column stays the primary category for everything that
+ * still reads a single value (the classifier, chat's vault index, dedup) —
+ * writing both here is what stops the two representations drifting apart.
+ */
+async function setCategories(itemId, categories) {
+  const list = categories.length ? categories.slice(0, MAX_CATEGORIES) : [FALLBACK_CATEGORY]
+
+  await supabase.from('item_categories').delete().eq('item_id', itemId)
+  await supabase.from('item_categories').insert(
+    list.map((category) => ({ item_id: itemId, user_id: process.env.DEFAULT_USER_ID, category })),
+  )
+  await supabase.from('items').update({ category: list[0] }).eq('id', itemId)
+
+  return list
+}
+
+// Title and subtitle live in one column as "Title::subtitle" (see
+// services/enrichItem.js) — packed on write, split on read by the frontend.
+function packTitle(title, subtitle) {
+  const cleanTitle = (title || '').trim()
+  const cleanSubtitle = (subtitle || '').trim()
+  if (!cleanTitle) return null
+  return cleanSubtitle ? `${cleanTitle}::${cleanSubtitle}` : cleanTitle
+}
+
+// Every category available to pick from: the fixed taxonomy plus any the user
+// has invented, with usage counts.
+// Declared before GET /:id, or Express matches "categories" as an item id.
+router.get('/categories', async (req, res) => {
+  const { data, error } = await supabase
+    .from('item_categories')
+    .select('category')
+    .eq('user_id', process.env.DEFAULT_USER_ID)
+
+  if (error) return res.status(500).json({ error: error.message })
+
+  const counts = new Map(CATEGORIES.map((c) => [c, 0]))
+  for (const { category } of data || []) {
+    counts.set(category, (counts.get(category) || 0) + 1)
+  }
+
+  res.json(
+    [...counts.entries()]
+      .map(([category, count]) => ({ category, count, custom: !CATEGORIES.includes(category) }))
+      .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category)),
+  )
+})
+
 // Dashboard listing — optionally filtered by category.
 router.get('/', async (req, res) => {
   const { category } = req.query
@@ -22,7 +108,7 @@ router.get('/', async (req, res) => {
   let query = supabase
     .from('items')
     .select(
-      'id, source_type, raw_content, file_url, thumbnail_url, link_type, notes, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag)',
+      'id, source_type, raw_content, file_url, thumbnail_url, link_type, notes, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag), item_categories(category)',
     )
     .eq('user_id', process.env.DEFAULT_USER_ID)
     .order('created_at', { ascending: false })
@@ -81,7 +167,7 @@ router.get('/:id', async (req, res) => {
   const { data: item, error } = await supabase
     .from('items')
     .select(
-      'id, source_type, raw_content, extracted_text, file_url, thumbnail_url, link_type, notes, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag)',
+      'id, source_type, raw_content, extracted_text, file_url, thumbnail_url, link_type, notes, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag), item_categories(category)',
     )
     .eq('id', id)
     .eq('user_id', userId)
@@ -146,7 +232,7 @@ router.get('/:id', async (req, res) => {
 // Paste text (e.g. a LinkedIn post pasted manually). Notes are optional
 // and stored separately; AI summary is opt-in, same as every other source.
 router.post('/', async (req, res) => {
-  const { text, notes, generateSummary } = req.body
+  const { text, notes, generateSummary, categories } = req.body
 
   if (!text || !text.trim()) {
     return res.status(400).json({ error: 'text is required' })
@@ -161,7 +247,14 @@ router.post('/', async (req, res) => {
       extractedText: text,
       notes,
     })
-    const enrichment = await enrichItem(item, { skipSummary: generateSummary !== 'true' })
+    const chosen = parseCategories(categories)
+    const enrichment = await enrichItem(item, {
+      skipSummary: generateSummary !== 'true',
+      category: chosen[0] || null,
+    })
+    // The AI's pick only stands in when the user chose nothing; either way the
+    // item ends up with at least one category.
+    await setCategories(item.id, chosen.length ? chosen : [enrichment.category].filter(Boolean))
     res.status(201).json({ ...item, ...enrichment })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -174,7 +267,7 @@ router.post('/', async (req, res) => {
 // linkType (linkedin/blog/other) drives the badge shown on the card; AI
 // summary is opt-in, off by default, same as image/pdf/whatsapp.
 router.post('/link', async (req, res) => {
-  const { url, notes, linkType, generateSummary, skipFetch, manualContent } = req.body
+  const { url, notes, linkType, generateSummary, skipFetch, manualContent, categories } = req.body
 
   if (!url || !url.trim()) {
     return res.status(400).json({ error: 'url is required' })
@@ -208,7 +301,14 @@ router.post('/link', async (req, res) => {
       // For links this is the post's own og:image, shown inline in detail.
       fileUrl: imageUrl,
     })
-    const enrichment = await enrichItem(item, { skipSummary: generateSummary !== 'true' })
+    const chosen = parseCategories(categories)
+    const enrichment = await enrichItem(item, {
+      skipSummary: generateSummary !== 'true',
+      category: chosen[0] || null,
+    })
+    // The AI's pick only stands in when the user chose nothing; either way the
+    // item ends up with at least one category.
+    await setCategories(item.id, chosen.length ? chosen : [enrichment.category].filter(Boolean))
     res.status(201).json({ ...item, ...enrichment })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -235,7 +335,7 @@ router.post('/note/image', upload.single('file'), async (req, res) => {
 // links. The HTML is stored for display and flattened to plain text for
 // embedding and categorisation.
 router.post('/note', async (req, res) => {
-  const { html, generateSummary } = req.body
+  const { html, generateSummary, categories } = req.body
 
   const safeHtml = sanitizeNoteHtml(html)
   const text = noteHtmlToText(safeHtml)
@@ -259,7 +359,14 @@ router.post('/note', async (req, res) => {
       extractedText: text || 'Saved image note',
       fileUrl: thumbnail,
     })
-    const enrichment = await enrichItem(item, { skipSummary: generateSummary !== 'true' })
+    const chosen = parseCategories(categories)
+    const enrichment = await enrichItem(item, {
+      skipSummary: generateSummary !== 'true',
+      category: chosen[0] || null,
+    })
+    // The AI's pick only stands in when the user chose nothing; either way the
+    // item ends up with at least one category.
+    await setCategories(item.id, chosen.length ? chosen : [enrichment.category].filter(Boolean))
     res.status(201).json({ ...item, ...enrichment })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -272,7 +379,7 @@ router.post('/note', async (req, res) => {
 // combine with OCR text; AI summary is opt-in (off by default) since the
 // user may just want the image saved as-is.
 router.post('/image', upload.single('file'), async (req, res) => {
-  const { text, notes, generateSummary } = req.body
+  const { text, notes, generateSummary, categories } = req.body
 
   if (!req.file) {
     return res.status(400).json({ error: 'file is required' })
@@ -293,7 +400,14 @@ router.post('/image', upload.single('file'), async (req, res) => {
       fileUrl,
       notes,
     })
-    const enrichment = await enrichItem(item, { skipSummary: generateSummary !== 'true' })
+    const chosen = parseCategories(categories)
+    const enrichment = await enrichItem(item, {
+      skipSummary: generateSummary !== 'true',
+      category: chosen[0] || null,
+    })
+    // The AI's pick only stands in when the user chose nothing; either way the
+    // item ends up with at least one category.
+    await setCategories(item.id, chosen.length ? chosen : [enrichment.category].filter(Boolean))
     res.status(201).json({ ...item, ...enrichment })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -305,7 +419,7 @@ router.post('/image', upload.single('file'), async (req, res) => {
 // avoids a native canvas dependency on the server. User notes are optional and
 // combine with the extracted text; AI summary is opt-in.
 router.post('/pdf', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]), async (req, res) => {
-  const { notes, generateSummary } = req.body
+  const { notes, generateSummary, categories } = req.body
   const pdfFile = req.files?.file?.[0]
   const thumbnailFile = req.files?.thumbnail?.[0]
 
@@ -335,7 +449,14 @@ router.post('/pdf', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'thumb
       thumbnailUrl,
       notes,
     })
-    const enrichment = await enrichItem(item, { skipSummary: generateSummary !== 'true' })
+    const chosen = parseCategories(categories)
+    const enrichment = await enrichItem(item, {
+      skipSummary: generateSummary !== 'true',
+      category: chosen[0] || null,
+    })
+    // The AI's pick only stands in when the user chose nothing; either way the
+    // item ends up with at least one category.
+    await setCategories(item.id, chosen.length ? chosen : [enrichment.category].filter(Boolean))
     res.status(201).json({ ...item, ...enrichment })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -346,7 +467,7 @@ router.post('/pdf', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'thumb
 // parsed here into one item per message. Notes and the AI-summary choice
 // apply to the whole batch, since one upload becomes many items.
 router.post('/whatsapp', async (req, res) => {
-  const { text, notes, generateSummary } = req.body
+  const { text, notes, generateSummary, categories } = req.body
 
   if (!text || !text.trim()) {
     return res.status(400).json({ error: 'text (exported .txt contents) is required' })
@@ -366,7 +487,15 @@ router.post('/whatsapp', async (req, res) => {
     // hundreds of messages) don't block the HTTP response. Dashboard picks
     // up category/summary on next refresh once each item finishes.
     for (const item of items) {
-      enrichItem(item, { skipSummary: generateSummary !== 'true' }).catch((err) =>
+      const chosen = parseCategories(categories)
+      enrichItem(item, {
+        skipSummary: generateSummary !== 'true',
+        category: chosen[0] || null,
+      })
+        .then((enrichment) =>
+          setCategories(item.id, chosen.length ? chosen : [enrichment?.category].filter(Boolean)),
+        )
+        .catch((err) =>
         console.error(`Background enrichment failed for item ${item.id}:`, err.message),
       )
     }
@@ -378,31 +507,52 @@ router.post('/whatsapp', async (req, res) => {
 // Tag an item (used for favorites and other free-form tags).
 router.post('/:id/tags', async (req, res) => {
   const { id } = req.params
-  const { tag } = req.body
+  const tag = normalizeLabel(req.body.tag)
 
-  if (!tag || !tag.trim()) {
+  if (!tag) {
     return res.status(400).json({ error: 'tag is required' })
   }
 
-  const { data, error } = await supabase
-    .from('tags')
-    .insert({ item_id: id, user_id: process.env.DEFAULT_USER_ID, tag: tag.trim() })
-    .select()
-    .single()
-
+  const { error } = await addTags(id, [tag])
   if (error) return res.status(500).json({ error: error.message })
-  res.status(201).json(data)
+  res.status(201).json({ tag })
 })
 
-// Edit an item's summary and/or notes from the detail view. Re-embeds
-// afterwards so edited text stays searchable and dedup stays accurate.
+// Edit an item's own fields from the detail view. Re-embeds afterwards so
+// edited text stays searchable and dedup stays accurate.
 router.patch('/:id', async (req, res) => {
   const { id } = req.params
-  const { summary, notes } = req.body
+  const { summary, notes, categories, title, subtitle } = req.body
 
   const updates = {}
   if (summary !== undefined) updates.summary = summary?.trim() || null
   if (notes !== undefined) updates.notes = notes?.trim() || null
+
+  // Categories live in their own table, so they're applied separately rather
+  // than as a column update. Any label is allowed — the user can invent their
+  // own — but there must be at least one and at most three.
+  if (categories !== undefined) {
+    const chosen = parseCategories(categories)
+    if (!chosen.length) {
+      return res.status(400).json({ error: 'Pick at least one category' })
+    }
+    await setCategories(id, chosen)
+  }
+
+  if (Object.keys(updates).length === 0 && categories !== undefined) {
+    const { data: refreshed } = await supabase
+      .from('items')
+      .select('id, title, summary, category, item_categories(category)')
+      .eq('id', id)
+      .single()
+    return res.json(refreshed)
+  }
+
+  // Title and subtitle share one column, packed as "Title::subtitle" (see
+  // enrichItem.js). The UI works with them separately; the packing stays here.
+  if (title !== undefined || subtitle !== undefined) {
+    updates.title = packTitle(title, subtitle)
+  }
 
   if (Object.keys(updates).length === 0) {
     return res.status(400).json({ error: 'Nothing to update' })
@@ -413,7 +563,7 @@ router.patch('/:id', async (req, res) => {
     .update(updates)
     .eq('id', id)
     .eq('user_id', process.env.DEFAULT_USER_ID)
-    .select()
+    .select('*, item_categories(category)')
     .single()
 
   if (error) return res.status(500).json({ error: error.message })
@@ -427,13 +577,116 @@ router.patch('/:id', async (req, res) => {
   res.json(data)
 })
 
+// Ask a question about one specific item while reading it. Its own text is
+// always supplied as the leading excerpts, with related vault content behind
+// it — so this answers about the open item first but can still reach wider.
+//
+// Deliberately not written to chat_queries/chat_sessions: these are throwaway
+// questions asked in context, and recording them would bury real conversations
+// in the Ask My Vault history.
+const RELATED_CHUNK_COUNT = 4
+
+router.post('/:id/chat', async (req, res) => {
+  const { id } = req.params
+  const { query, history } = req.body
+  const userId = process.env.DEFAULT_USER_ID
+
+  if (!query || !query.trim()) {
+    return res.status(400).json({ error: 'query is required' })
+  }
+
+  try {
+    const { data: item, error: itemError } = await supabase
+      .from('items')
+      .select('id, title, summary, category, extracted_text, notes')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single()
+
+    if (itemError) return res.status(404).json({ error: 'Item not found' })
+
+    const { data: ownChunks } = await supabase
+      .from('embeddings')
+      .select('item_id, chunk_text')
+      .eq('item_id', id)
+      .eq('user_id', userId)
+
+    // An item saved before embeddings ran still has its stored text, so fall
+    // back to that rather than answering with nothing to go on.
+    const focusChunks = ownChunks?.length
+      ? ownChunks
+      : [
+          {
+            item_id: id,
+            chunk_text: [item.notes, item.extracted_text, item.summary].filter(Boolean).join('\n\n'),
+          },
+        ]
+
+    const queryEmbedding = await embedText(query)
+    const { data: matches } = await supabase.rpc('match_embeddings', {
+      query_embedding: queryEmbedding,
+      match_user_id: userId,
+      match_count: RELATED_CHUNK_COUNT + (ownChunks?.length || 0),
+    })
+
+    // Drop this item's own chunks from the related set — they're already the
+    // focus excerpts, and repeating them wastes context and confuses numbering.
+    const relatedChunks = (matches || [])
+      .filter((m) => m.item_id !== id)
+      .slice(0, RELATED_CHUNK_COUNT)
+
+    const chunks = [...focusChunks, ...relatedChunks]
+
+    const rawAnswer = await generateGroundedAnswer(query, chunks, {
+      // Without this the prompt states the vault is empty, which contradicts
+      // `covered` and makes the model deny the user has saved anything.
+      vaultIndex: await loadVaultIndex(userId),
+      history: (Array.isArray(history) ? history : [])
+        .slice(-6)
+        .filter((m) => m?.text && (m.role === 'user' || m.role === 'assistant'))
+        .map((m) => ({ role: m.role, text: m.text })),
+      // The item's own text is always present, so the "not in your vault"
+      // flag must never fire here.
+      covered: true,
+      focusCount: focusChunks.length,
+    })
+
+    const answer = sanitizeCitations(rawAnswer, chunks.length)
+    const referenced = referencedIndexes(answer)
+
+    const citedItemIds = [
+      ...new Set(chunks.filter((_, i) => referenced.has(i + 1)).map((c) => c.item_id)),
+    ]
+    const { data: citedItems } = citedItemIds.length
+      ? await supabase
+          .from('items')
+          .select('id, source_type, summary, category, created_at')
+          .in('id', citedItemIds)
+      : { data: [] }
+
+    const citations = chunks
+      .map((c, i) => ({
+        index: i + 1,
+        item: citedItems?.find((it) => it.id === c.item_id) || null,
+        chunk_text: c.chunk_text,
+      }))
+      .filter((c) => referenced.has(c.index))
+
+    res.json({ answer, citations })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // Remove a specific tag from an item (e.g. un-favoriting
 // once it's actually been reviewed).
 router.delete('/:id/tags', async (req, res) => {
   const { id } = req.params
-  const { tag } = req.body
+  // Normalised the same way as on insert, so a tag can always be removed by
+  // the exact string the UI is displaying.
+  const tag = normalizeLabel(req.body.tag)
 
-  if (!tag || !tag.trim()) {
+  if (!tag) {
     return res.status(400).json({ error: 'tag is required' })
   }
 
@@ -442,7 +695,7 @@ router.delete('/:id/tags', async (req, res) => {
     .delete()
     .eq('item_id', id)
     .eq('user_id', process.env.DEFAULT_USER_ID)
-    .eq('tag', tag.trim())
+    .eq('tag', tag)
 
   if (error) return res.status(500).json({ error: error.message })
   res.status(204).end()

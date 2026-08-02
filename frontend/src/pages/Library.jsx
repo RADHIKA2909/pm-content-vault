@@ -6,17 +6,8 @@ import { useToast } from '../components/ToastContext.jsx'
 import LibraryCard from '../components/LibraryCard.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
 import { SkeletonCard } from '../components/Skeleton.jsx'
+import { CATEGORIES, FAVORITE_TAG, itemCategories } from '../lib/categories.js'
 
-const CATEGORIES = [
-  'Interview Questions',
-  'Job Postings',
-  'Application Tips',
-  'Frameworks',
-  'Industry News',
-  'Other',
-]
-
-export const FAVORITE_TAG = 'favorite'
 
 function Library() {
   const [items, setItems] = useState([])
@@ -56,15 +47,25 @@ function Library() {
   const categoryCounts = useMemo(() => {
     const counts = {}
     for (const item of items) {
-      if (item.category) counts[item.category] = (counts[item.category] || 0) + 1
+      for (const c of itemCategories(item)) counts[c] = (counts[c] || 0) + 1
     }
     return counts
   }, [items])
 
+  // Most-used first, so the categories actually worth filtering by sit at the
+  // top. Unused taxonomy values still appear, just at the bottom; ties fall
+  // back to alphabetical so the order doesn't jitter between renders.
+  const allCategories = useMemo(() => {
+    const names = new Set([...CATEGORIES, ...Object.keys(categoryCounts)])
+    return [...names].sort(
+      (a, b) => (categoryCounts[b] || 0) - (categoryCounts[a] || 0) || a.localeCompare(b),
+    )
+  }, [categoryCounts])
+
   const visibleItems = useMemo(() => {
     let result = items
 
-    if (category) result = result.filter((item) => item.category === category)
+    if (category) result = result.filter((item) => itemCategories(item).includes(category))
 
     if (search.trim()) {
       const q = search.trim().toLowerCase()
@@ -72,7 +73,7 @@ function Library() {
         (item) =>
           item.title?.toLowerCase().includes(q) ||
           item.summary?.toLowerCase().includes(q) ||
-          item.category?.toLowerCase().includes(q) ||
+          itemCategories(item).some((c) => c.toLowerCase().includes(q)) ||
           item.raw_content?.toLowerCase().includes(q),
       )
     }
@@ -121,7 +122,7 @@ function Library() {
             >
               All items <span className="text-caption">{items.length}</span>
             </button>
-            {CATEGORIES.map((c) => (
+            {allCategories.map((c) => (
               <button
                 key={c}
                 onClick={() => setCategory(c)}

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Bold, Image as ImageIcon, Italic, Link2, List, ListOrdered } from 'lucide-react'
 import { API_URL } from '../lib/api.js'
 import StatusMessage from './StatusMessage.jsx'
+import IngestOptions from './IngestOptions.jsx'
 import Button from './Button.jsx'
 
 const BARE_URL = /^https?:\/\/\S+$/i
@@ -16,6 +17,7 @@ function escapeHtml(value) {
 // sanitised server-side before it's ever stored or displayed.
 function IngestNote({ onSaved }) {
   const [generateSummary, setGenerateSummary] = useState(false)
+  const [categories, setCategories] = useState([])
   const [status, setStatus] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [linkOpen, setLinkOpen] = useState(false)
@@ -142,7 +144,7 @@ function IngestNote({ onSaved }) {
       const res = await fetch(`${API_URL}/api/items/note`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html, generateSummary: generateSummary ? 'true' : 'false' }),
+        body: JSON.stringify({ html, generateSummary: generateSummary ? 'true' : 'false', categories }),
       })
 
       const data = await res.json()
@@ -151,6 +153,7 @@ function IngestNote({ onSaved }) {
       editorRef.current.innerHTML = ''
       savedRange.current = null
       setGenerateSummary(false)
+      setCategories([])
       setStatus(
         data.warning
           ? { type: 'error', message: data.warning }
@@ -240,15 +243,15 @@ function IngestNote({ onSaved }) {
           }}
         />
 
-        <label className="flex items-center gap-2 text-sm text-text-secondary">
-          <input
-            type="checkbox"
-            checked={generateSummary}
-            onChange={(e) => setGenerateSummary(e.target.checked)}
-            className="h-4 w-4 rounded border-border-subtle text-primary focus:ring-primary"
-          />
-          Generate AI summary for this note
-        </label>
+        {/* No notes field here — the body above already is the note. */}
+        <IngestOptions
+          generateSummary={generateSummary}
+          onGenerateSummaryChange={setGenerateSummary}
+          categories={categories}
+          onCategoriesChange={setCategories}
+          summaryLabel="Generate AI summary for this note"
+          showNotes={false}
+        />
 
         <Button onClick={save} disabled={uploading} className="self-start">
           Save

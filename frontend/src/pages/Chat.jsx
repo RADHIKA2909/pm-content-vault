@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import ReactMarkdown from 'react-markdown'
-import { ChevronDown, Mic, PanelLeft, SendHorizontal } from 'lucide-react'
+import { Mic, PanelLeft, SendHorizontal } from 'lucide-react'
 import { API_URL } from '../lib/api.js'
 import { useSpeechInput } from '../lib/useSpeechInput.js'
-import { CategoryChip } from '../components/Chip.jsx'
+import { MessageBubble, TypingDots } from '../components/ChatMessages.jsx'
 import ChatHistoryPanel from '../components/ChatHistoryPanel.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
 
@@ -14,60 +13,6 @@ const SUGGESTED_PROMPTS = [
   'Ask me a product sense question',
   'What metrics matter for a SaaS product?',
 ]
-
-function TypingDots() {
-  return (
-    <div className="flex items-center gap-1 px-4 py-3">
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="h-1.5 w-1.5 animate-bounce rounded-full bg-border-subtle"
-          style={{ animationDelay: `${i * 0.12}s` }}
-        />
-      ))}
-    </div>
-  )
-}
-
-function Sources({ citations }) {
-  const [open, setOpen] = useState(false)
-  const navigate = useNavigate()
-
-  if (!citations?.length) return null
-
-  return (
-    <div className="mt-2 border-t border-border-subtle pt-2">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 text-caption font-medium text-text-secondary hover:text-text-primary"
-      >
-        Sources ({citations.length}) <ChevronDown className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-
-      {open && (
-        <div className="mt-2 flex flex-col gap-1.5">
-          {citations.map((c) => (
-            <button
-              key={c.index}
-              onClick={() => c.item?.id && navigate(`/library/${c.item.id}`)}
-              className="flex items-start gap-2 rounded-xl bg-muted px-2.5 py-2 text-left transition-colors hover:bg-primary-light"
-            >
-              <span className="mt-0.5 shrink-0 rounded bg-surface px-1.5 py-0.5 text-caption font-medium text-text-secondary">
-                {c.index}
-              </span>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <CategoryChip category={c.item?.category} />
-                <span className="text-caption text-text-secondary">
-                  {c.item?.summary || c.chunk_text.slice(0, 90)}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 // Stored turns only keep the cited item ids, so the Sources list is rebuilt
 // from the current library. An item deleted since is simply dropped.
@@ -275,28 +220,9 @@ function Chat() {
           </div>
         )}
 
-        {messages.map((m, i) =>
-          m.role === 'user' ? (
-            <div key={i} className="flex justify-end">
-              <p className="max-w-[80%] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-white">
-                {m.text}
-              </p>
-            </div>
-          ) : (
-            <div key={i} className="flex justify-start">
-              <div
-                className={`max-w-[85%] rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm ${
-                  m.error ? 'bg-warning/10 text-warning' : 'border border-border-subtle bg-surface'
-                }`}
-              >
-                <div className="prose prose-sm max-w-none prose-p:my-1.5 prose-ul:my-1.5">
-                  <ReactMarkdown>{m.text}</ReactMarkdown>
-                </div>
-                <Sources citations={m.citations} />
-              </div>
-            </div>
-          ),
-        )}
+        {messages.map((m, i) => (
+          <MessageBubble key={i} message={m} />
+        ))}
 
         {loading && (
           <div className="flex justify-start">

@@ -16,6 +16,7 @@ function IngestLink({ onSaved }) {
   const [notes, setNotes] = useState('')
   const [linkType, setLinkType] = useState('linkedin')
   const [generateSummary, setGenerateSummary] = useState(false)
+  const [categories, setCategories] = useState([])
   const [status, setStatus] = useState(null)
   // Set when the backend couldn't read the page — offers the user a choice
   // between saving the bare link or pasting the content in themselves.
@@ -27,6 +28,7 @@ function IngestLink({ onSaved }) {
     setUrl('')
     setNotes('')
     setGenerateSummary(false)
+    setCategories([])
     setFetchFailure(null)
     setManualContent('')
     setShowManualInput(false)
@@ -44,6 +46,7 @@ function IngestLink({ onSaved }) {
           notes,
           linkType,
           generateSummary: generateSummary ? 'true' : 'false',
+          categories,
           ...extraFields,
         }),
       })
@@ -111,6 +114,8 @@ function IngestLink({ onSaved }) {
           onNotesChange={setNotes}
           generateSummary={generateSummary}
           onGenerateSummaryChange={setGenerateSummary}
+          categories={categories}
+          onCategoriesChange={setCategories}
           notesPlaceholder="Add your own notes about this link (optional)..."
           summaryLabel="Generate AI summary for this link"
         />

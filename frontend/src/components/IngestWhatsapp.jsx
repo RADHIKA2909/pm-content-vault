@@ -18,6 +18,7 @@ function IngestWhatsapp({ onSaved }) {
   const [file, setFile] = useState(null)
   const [notes, setNotes] = useState('')
   const [generateSummary, setGenerateSummary] = useState(false)
+  const [categories, setCategories] = useState([])
   const [status, setStatus] = useState(null)
 
   const handleFile = (selectedFile) => {
@@ -38,6 +39,7 @@ function IngestWhatsapp({ onSaved }) {
           text,
           notes,
           generateSummary: generateSummary ? 'true' : 'false',
+          categories,
         }),
       })
 
@@ -50,6 +52,7 @@ function IngestWhatsapp({ onSaved }) {
       setFile(null)
       setNotes('')
       setGenerateSummary(false)
+      setCategories([])
       setStatus({ type: 'success', message: `Saved ${count} messages.` })
       onSaved?.()
     } catch (err) {
@@ -82,6 +85,8 @@ function IngestWhatsapp({ onSaved }) {
             onNotesChange={setNotes}
             generateSummary={generateSummary}
             onGenerateSummaryChange={setGenerateSummary}
+            categories={categories}
+            onCategoriesChange={setCategories}
             notesPlaceholder="Add a note about this chat export (applies to every message)..."
             summaryLabel="Generate AI summary for every message in this export"
           />

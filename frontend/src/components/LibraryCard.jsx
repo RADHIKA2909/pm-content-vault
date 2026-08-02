@@ -3,9 +3,11 @@ import { CategoryChip, DuplicateChip } from './Chip.jsx'
 import SourceBadge from './SourceBadge.jsx'
 import SourceThumbnail from './SourceThumbnail.jsx'
 import { parseTitle } from '../lib/parseTitle.js'
+import { itemCategories } from '../lib/categories.js'
 
 function LibraryCard({ item, isFavorite, onOpen, onToggleFavorite, onDelete }) {
   const { title, subtitle } = parseTitle(item.title)
+  const categories = itemCategories(item)
 
   return (
     <li
@@ -33,7 +35,6 @@ function LibraryCard({ item, isFavorite, onOpen, onToggleFavorite, onDelete }) {
         {/* Source sits here rather than over the thumbnail — as an overlay it
             covered the headline of image-heavy saves. */}
         <div className="mb-2 flex flex-wrap items-center gap-1.5">
-          <CategoryChip category={item.category} />
           {item.duplicateOf && <DuplicateChip similarity={item.duplicateOf.similarity} />}
           <span className="ml-auto flex shrink-0 items-center gap-1.5 text-caption text-text-secondary">
             <SourceBadge sourceType={item.source_type} linkType={item.link_type} />
@@ -53,6 +54,16 @@ function LibraryCard({ item, isFavorite, onOpen, onToggleFavorite, onDelete }) {
               <span className="italic text-text-secondary">No AI summary</span>
             )}
           </p>
+        )}
+
+        {/* All of the item's categories, below the title as requested — an
+            item can carry up to three. */}
+        {categories.length > 0 && (
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {categories.map((category) => (
+              <CategoryChip key={category} category={category} />
+            ))}
+          </div>
         )}
 
         <div className="mt-3 flex items-center gap-3 opacity-0 transition-opacity group-hover:opacity-100">

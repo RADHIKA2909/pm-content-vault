@@ -10,6 +10,7 @@ function IngestPdf({ onSaved }) {
   const [file, setFile] = useState(null)
   const [notes, setNotes] = useState('')
   const [generateSummary, setGenerateSummary] = useState(false)
+  const [categories, setCategories] = useState([])
   const [status, setStatus] = useState(null)
 
   const handleFile = (selectedFile) => {
@@ -31,6 +32,7 @@ function IngestPdf({ onSaved }) {
       formData.append('file', file)
       formData.append('notes', notes)
       formData.append('generateSummary', generateSummary ? 'true' : 'false')
+      formData.append('categories', JSON.stringify(categories))
       if (thumbnail) formData.append('thumbnail', thumbnail, 'page1.png')
 
       const res = await fetch(`${API_URL}/api/items/pdf`, {
@@ -44,6 +46,7 @@ function IngestPdf({ onSaved }) {
       setFile(null)
       setNotes('')
       setGenerateSummary(false)
+      setCategories([])
       setStatus(
         data.warning
           ? { type: 'error', message: data.warning }
@@ -80,6 +83,8 @@ function IngestPdf({ onSaved }) {
             onNotesChange={setNotes}
             generateSummary={generateSummary}
             onGenerateSummaryChange={setGenerateSummary}
+            categories={categories}
+            onCategoriesChange={setCategories}
             notesPlaceholder="Add your own notes about this PDF (optional)..."
             summaryLabel="Generate AI summary for this PDF"
           />

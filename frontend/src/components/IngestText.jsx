@@ -8,6 +8,7 @@ function IngestText({ onSaved }) {
   const [text, setText] = useState('')
   const [notes, setNotes] = useState('')
   const [generateSummary, setGenerateSummary] = useState(false)
+  const [categories, setCategories] = useState([])
   const [status, setStatus] = useState(null)
 
   const handleSubmit = async (e) => {
@@ -22,6 +23,7 @@ function IngestText({ onSaved }) {
           text,
           notes,
           generateSummary: generateSummary ? 'true' : 'false',
+          categories,
         }),
       })
 
@@ -31,6 +33,7 @@ function IngestText({ onSaved }) {
       setText('')
       setNotes('')
       setGenerateSummary(false)
+    setCategories([])
       setStatus(
         data.warning
           ? { type: 'error', message: data.warning }
@@ -59,6 +62,8 @@ function IngestText({ onSaved }) {
           onNotesChange={setNotes}
           generateSummary={generateSummary}
           onGenerateSummaryChange={setGenerateSummary}
+          categories={categories}
+          onCategoriesChange={setCategories}
           notesPlaceholder="Add your own notes about this (optional)..."
           summaryLabel="Generate AI summary for this text"
         />

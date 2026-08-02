@@ -9,7 +9,7 @@ import Modal from '../components/Modal.jsx'
 import { CategoryChip } from '../components/Chip.jsx'
 import { SkeletonCard } from '../components/Skeleton.jsx'
 import Ingest from './Ingest.jsx'
-import { FAVORITE_TAG } from './Library.jsx'
+import { FAVORITE_TAG, itemCategories } from '../lib/categories.js'
 import FavoritesDecoration from '../components/decorations/FavoritesDecoration.jsx'
 import KnowledgeHealthDecoration from '../components/decorations/KnowledgeHealthDecoration.jsx'
 
@@ -69,7 +69,7 @@ function Dashboard() {
   const topCategories = useMemo(() => {
     const counts = {}
     for (const item of items) {
-      if (item.category) counts[item.category] = (counts[item.category] || 0) + 1
+      for (const c of itemCategories(item)) counts[c] = (counts[c] || 0) + 1
     }
     return Object.entries(counts)
       .sort((a, b) => b[1] - a[1])
@@ -189,7 +189,9 @@ function Dashboard() {
                   <p className="truncate text-sm font-semibold text-text-primary">
                     {parseTitle(item.title).title || item.summary || item.source_type}
                   </p>
-                  <CategoryChip category={item.category} />
+                  {itemCategories(item).map((c) => (
+                    <CategoryChip key={c} category={c} />
+                  ))}
                 </li>
               ))}
             </ul>

@@ -10,6 +10,7 @@ function IngestImage({ onSaved }) {
   const [file, setFile] = useState(null)
   const [notes, setNotes] = useState('')
   const [generateSummary, setGenerateSummary] = useState(false)
+  const [categories, setCategories] = useState([])
   const [status, setStatus] = useState(null)
 
   const handleFile = (selectedFile) => {
@@ -34,6 +35,7 @@ function IngestImage({ onSaved }) {
       formData.append('text', text)
       formData.append('notes', notes)
       formData.append('generateSummary', generateSummary ? 'true' : 'false')
+      formData.append('categories', JSON.stringify(categories))
 
       const res = await fetch(`${API_URL}/api/items/image`, {
         method: 'POST',
@@ -46,6 +48,7 @@ function IngestImage({ onSaved }) {
       setFile(null)
       setNotes('')
       setGenerateSummary(false)
+      setCategories([])
       setStatus(
         data.warning
           ? { type: 'error', message: data.warning }
@@ -82,6 +85,8 @@ function IngestImage({ onSaved }) {
             onNotesChange={setNotes}
             generateSummary={generateSummary}
             onGenerateSummaryChange={setGenerateSummary}
+            categories={categories}
+            onCategoriesChange={setCategories}
             notesPlaceholder="Add your own notes about this image (optional)..."
             summaryLabel="Generate AI summary for this image"
           />

@@ -1,6 +1,8 @@
 import { Router } from 'express'
 import supabase from '../services/supabaseClient.js'
 import { embedText, generateGroundedAnswer } from '../services/gemini.js'
+import { sanitizeCitations, referencedIndexes } from '../services/citations.js'
+import { loadVaultIndex } from '../services/vaultIndex.js'
 
 const router = Router()
 
@@ -76,28 +78,6 @@ async function resolveSession(userId, sessionId, firstQuery) {
   return data.id
 }
 
-// Titles are stored packed as "Title::subtitle" — the index only needs the
-// headline half.
-function unpackTitle(title) {
-  return (title || '').split('::')[0].trim()
-}
-
-// A compact inventory of everything saved, so the assistant can answer
-// questions *about* the vault ("what topics do I have?") — similarity search
-// retrieves passages, which can never enumerate a collection.
-const MAX_INDEXED_ITEMS = 200
-
-async function loadVaultIndex(userId) {
-  const { data } = await supabase
-    .from('items')
-    .select('title, category, subcategory, summary')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(MAX_INDEXED_ITEMS)
-
-  return (data || []).map((it) => ({ ...it, title: unpackTitle(it.title) }))
-}
-
 // Hybrid assistant: pgvector similarity search supplies citable excerpts, the
 // vault index supplies collection-level awareness, and recent turns supply
 // follow-up context. Gemini decides which of the three a message needs.
@@ -142,32 +122,9 @@ router.post('/', async (req, res) => {
       covered: topSimilarity >= VAULT_COVERAGE_THRESHOLD,
     })
 
-    // The model writes citations both as "[1]" and grouped as "[1, 2]" — match
-    // both, or grouped ones get read as plain text and their sources vanish
-    // from the Sources list.
-    const CITATION_MARKER = /\[(\d+(?:\s*,\s*\d+)*)\]/g
-    const isRetrieved = (n) => n >= 1 && n <= matches.length
-
-    // The model can only legitimately cite an excerpt that was retrieved.
-    // Anything outside that range is a stray marker (most likely when nothing
-    // matched at all) and would render as a citation that goes nowhere.
-    const answer = rawAnswer
-      .replace(CITATION_MARKER, (marker, group) => {
-        const valid = group.split(',').map((n) => Number(n.trim())).filter(isRetrieved)
-        return valid.length ? `[${valid.join(', ')}]` : ''
-      })
-      .replace(/ {2,}/g, ' ')
-      .replace(/ +([.,;:])/g, '$1') // tidy the gap a removed marker leaves behind
-
-    // Only surface citations the model actually referenced inline (e.g. "[1]"),
-    // not every chunk that was retrieved — retrieval often pulls in
-    // low-relevance chunks the model correctly ignored.
-    const referencedIndexes = new Set(
-      [...answer.matchAll(CITATION_MARKER)].flatMap((m) =>
-        m[1].split(',').map((n) => Number(n.trim())),
-      ),
-    )
-    const relevantMatches = matches.filter((_, i) => referencedIndexes.has(i + 1))
+    const answer = sanitizeCitations(rawAnswer, matches.length)
+    const referenced = referencedIndexes(answer)
+    const relevantMatches = matches.filter((_, i) => referenced.has(i + 1))
 
     const itemIds = [...new Set(relevantMatches.map((m) => m.item_id))]
     const { data: items } = itemIds.length
@@ -184,7 +141,7 @@ router.post('/', async (req, res) => {
         chunk_text: m.chunk_text,
         similarity: m.similarity,
       }))
-      .filter((c) => referencedIndexes.has(c.index))
+      .filter((c) => referenced.has(c.index))
 
     await supabase.from('chat_queries').insert({
       user_id: userId,

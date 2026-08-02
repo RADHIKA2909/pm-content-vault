@@ -143,12 +143,20 @@ function formatHistory(history) {
 export async function generateGroundedAnswer(
   query,
   chunks,
-  { vaultIndex = [], history = [], covered = false } = {},
+  { vaultIndex = [], history = [], covered = false, focusCount = 0 } = {},
 ) {
 
   const excerpts = chunks.length
     ? chunks.map((c, i) => `[${i + 1}] ${c.chunk_text}`).join('\n\n')
     : '(nothing saved matched this question)'
+
+  // Set when the user is reading one specific item and asking about it, so the
+  // model leads with that piece instead of treating every excerpt as equal.
+  const focus = focusCount
+    ? `\nThe user is reading one saved item right now. Excerpt${focusCount > 1 ? 's' : ''} [${
+        focusCount > 1 ? `1]-[${focusCount}` : '1'
+      }] ${focusCount > 1 ? 'are' : 'is'} that item — answer about it first. Later excerpts are other things they've saved; bring those in only when they add something, and say when you're doing so.\n`
+    : ''
 
   // Asking the model to judge whether its own answer came from the vault
   // proved unreliable — it would flag a topic as missing while citing an
@@ -186,6 +194,7 @@ Formatting rules:
 
 VAULT COVERAGE (already determined — treat as fact, don't second-guess it):
 ${coverage}
+${focus}
 
 VAULT INDEX (everything the user has saved):
 ${formatVaultIndex(vaultIndex)}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Star, ExternalLink, ChevronDown, Trash2, Copy } from 'lucide-react'
+import { ArrowLeft, Star, ExternalLink, ChevronDown, Trash2, Copy, Pencil, Plus, X } from 'lucide-react'
 import { API_URL } from '../lib/api.js'
 import { useToast } from '../components/ToastContext.jsx'
 import Card from '../components/Card.jsx'
@@ -8,10 +8,12 @@ import Button from '../components/Button.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
 import EditableSection from '../components/EditableSection.jsx'
 import PostContent from '../components/PostContent.jsx'
-import { CategoryChip, DuplicateChip, Chip } from '../components/Chip.jsx'
+import { DuplicateChip, Chip } from '../components/Chip.jsx'
+import CategoryPicker from '../components/CategoryPicker.jsx'
+import ItemChatPanel from '../components/ItemChatPanel.jsx'
 import SourceBadge from '../components/SourceBadge.jsx'
 import { SkeletonCard } from '../components/Skeleton.jsx'
-import { FAVORITE_TAG } from './Library.jsx'
+import { MAX_CATEGORIES, FAVORITE_TAG, itemCategories } from '../lib/categories.js'
 import { parseTitle } from '../lib/parseTitle.js'
 
 function ItemDetail() {
@@ -22,10 +24,17 @@ function ItemDetail() {
   const [loading, setLoading] = useState(true)
   const [showOriginal, setShowOriginal] = useState(false)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
+  const [subtitleDraft, setSubtitleDraft] = useState('')
+  const [addingCategory, setAddingCategory] = useState(false)
   const engagedIdRef = useRef(null)
 
-  const fetchItem = async () => {
-    setLoading(true)
+  // `silent` re-reads the item without swapping the page for a skeleton —
+  // used after tag and favourite changes, where blanking the whole view for a
+  // one-chip update is jarring and loses your scroll position.
+  const fetchItem = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true)
     const res = await fetch(`${API_URL}/api/items/${id}`)
     if (res.ok) {
       const data = await res.json()
@@ -34,7 +43,7 @@ function ItemDetail() {
       // main thing to see, so show it expanded by default.
       if (!data.summary) setShowOriginal(true)
     }
-    setLoading(false)
+    if (!silent) setLoading(false)
   }
 
   useEffect(() => {
@@ -58,7 +67,7 @@ function ItemDetail() {
       body: JSON.stringify({ tag: FAVORITE_TAG }),
     })
     showToast(isFavorite ? 'Removed from favorites' : 'Added to favorites')
-    fetchItem()
+    fetchItem({ silent: true })
   }
 
   const handleFieldSave = async (fields) => {
@@ -86,6 +95,27 @@ function ItemDetail() {
     navigate('/library')
   }
 
+  const startEditingTitle = () => {
+    const { title: currentTitle, subtitle: currentSubtitle } = parseTitle(item.title)
+    setTitleDraft(currentTitle || '')
+    setSubtitleDraft(currentSubtitle || '')
+    setEditingTitle(true)
+  }
+
+  const saveTitle = async () => {
+    await handleFieldSave({ title: titleDraft, subtitle: subtitleDraft })
+    setEditingTitle(false)
+  }
+
+  // At least one category must remain — the picker and the chip row both
+  // prevent removing the last one, and the server rejects an empty list.
+  const saveCategories = async (next) => {
+    if (!next.length) return
+    await handleFieldSave({ categories: next })
+    setAddingCategory(false)
+  }
+
+
   if (loading) {
     return (
       <div>
@@ -106,6 +136,8 @@ function ItemDetail() {
   }
 
   const isFavorite = item.tags?.some((t) => t.tag === FAVORITE_TAG)
+  const { title, subtitle } = parseTitle(item.title)
+  const categories = itemCategories(item)
 
   return (
     <div>
@@ -121,7 +153,6 @@ function ItemDetail() {
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <SourceBadge sourceType={item.source_type} linkType={item.link_type} />
-              <CategoryChip category={item.category} />
               {item.subcategory && <Chip>{item.subcategory}</Chip>}
               {item.duplicateOf && <DuplicateChip similarity={item.duplicateOf.similarity} />}
             </div>
@@ -135,6 +166,91 @@ function ItemDetail() {
               </Button>
             </div>
           </div>
+
+          {/* The heading the detail view never had — and it's editable, since
+              the title and subtitle are the AI's guess rather than the user's. */}
+          {editingTitle ? (
+            <div className="mb-4 flex flex-col gap-2">
+              <input
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                placeholder="Title (1-2 words)"
+                autoFocus
+                className="rounded-xl border border-border-subtle px-3 py-2 text-[22px] font-semibold text-text-primary focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <input
+                value={subtitleDraft}
+                onChange={(e) => setSubtitleDraft(e.target.value)}
+                placeholder="Short subtitle"
+                className="rounded-xl border border-border-subtle px-3 py-2 text-sm text-text-secondary focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <div className="flex items-center gap-2">
+                <Button onClick={saveTitle}>Save</Button>
+                <Button variant="ghost" onClick={() => setEditingTitle(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="group mb-4 flex items-start gap-2">
+              <div className="min-w-0">
+                <h1 className="text-[24px] font-semibold tracking-tight text-text-primary">
+                  {title || <span className="text-text-secondary">Untitled</span>}
+                </h1>
+                {subtitle && <p className="text-body text-text-secondary">{subtitle}</p>}
+              </div>
+              <button
+                onClick={startEditingTitle}
+                aria-label="Edit title"
+                className="mt-1 rounded-lg p-1.5 text-text-secondary opacity-0 transition-opacity hover:bg-muted hover:text-text-primary focus:opacity-100 group-hover:opacity-100"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          {/* One to three categories, drawn from the fixed taxonomy or
+              invented by the user. Shown as chips with a + to add more. */}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            {categories.map((category) => (
+              <span
+                key={category}
+                className="inline-flex items-center gap-1 rounded-full bg-primary-light px-2.5 py-0.5 text-caption font-medium text-primary"
+              >
+                {category}
+                {categories.length > 1 && (
+                  <button
+                    onClick={() => saveCategories(categories.filter((c) => c !== category))}
+                    aria-label={`Remove category ${category}`}
+                    className="hover:text-primary-hover"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </span>
+            ))}
+
+            {categories.length < MAX_CATEGORIES && (
+              <button
+                onClick={() => setAddingCategory((v) => !v)}
+                aria-label="Add category"
+                className="inline-flex items-center gap-1 rounded-full border border-dashed border-border-subtle px-2.5 py-0.5 text-caption text-text-secondary transition-colors hover:border-primary hover:text-primary"
+              >
+                <Plus className="h-3 w-3" /> Category
+              </button>
+            )}
+          </div>
+
+          {addingCategory && (
+            <div className="mb-4 max-w-md">
+              <CategoryPicker
+                value={categories}
+                onChange={saveCategories}
+                label=""
+                showChips={false}
+              />
+            </div>
+          )}
 
           {item.duplicateOf && (
             <Card className="mb-4 border-warning/30 bg-warning/5">
@@ -306,6 +422,8 @@ function ItemDetail() {
               </div>
             )}
           </Card>
+
+          <ItemChatPanel itemId={item.id} />
 
           {item.relatedItems?.length > 0 && (
             <Card>

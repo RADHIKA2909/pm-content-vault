@@ -9,7 +9,7 @@ const DUPLICATE_THRESHOLD = 0.92
 // `skipSummary` lets the user opt out of AI categorization/summary (e.g. for
 // images/PDFs they just want stored as-is) while embeddings still run so the
 // item stays searchable via chat and dedup-checkable.
-export async function enrichItem(item, { skipSummary = false } = {}) {
+export async function enrichItem(item, { skipSummary = false, category: categoryOverride = null } = {}) {
   // Notes live in their own column but still feed summarization and search,
   // with the user's own framing first so it carries the most weight.
   const textToProcess = [item.notes, item.extracted_text].filter(Boolean).join('\n\n').trim()
@@ -18,13 +18,25 @@ export async function enrichItem(item, { skipSummary = false } = {}) {
   let categorization = {}
   let warning = null
 
+  // A category the user picked themselves outranks the model's guess. Applied
+  // as part of the same write rather than patched over afterwards.
+  if (skipSummary && categoryOverride) {
+    categorization = { category: categoryOverride }
+    await supabase.from('items').update(categorization).eq('id', item.id)
+  }
+
   if (!skipSummary) {
     try {
       const { category, subcategory, summary, title, subtitle } = await categorizeAndSummarize(textToProcess)
       // No spare column for a separate subtitle — pack "Title::subtitle" into
       // the existing `title` text field and split it back apart on read.
       const packedTitle = title && subtitle ? `${title}::${subtitle}` : title
-      categorization = { category, subcategory, summary, title: packedTitle }
+      categorization = {
+        category: categoryOverride || category,
+        subcategory: categoryOverride ? null : subcategory,
+        summary,
+        title: packedTitle,
+      }
       await supabase.from('items').update(categorization).eq('id', item.id)
     } catch (err) {
       console.error(`Categorization failed for item ${item.id}:`, err.message)
