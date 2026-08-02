@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
+    "predev": "lsof -ti:5173 | xargs kill -9 2>/dev/null; exit 0",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"

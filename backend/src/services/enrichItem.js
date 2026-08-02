@@ -6,43 +6,59 @@ const DUPLICATE_THRESHOLD = 0.92
 // Runs categorization/summarization, embedding, and dedup-checking for one
 // item. Best-effort: failures here (e.g. missing GEMINI_API_KEY) are logged,
 // not thrown — the item itself is already saved regardless of enrichment.
-export async function enrichItem(item) {
-  const textToProcess = item.extracted_text
-  if (!textToProcess || !textToProcess.trim()) return {}
+// `skipSummary` lets the user opt out of AI categorization/summary (e.g. for
+// images/PDFs they just want stored as-is) while embeddings still run so the
+// item stays searchable via chat and dedup-checkable.
+export async function enrichItem(item, { skipSummary = false } = {}) {
+  // Notes live in their own column but still feed summarization and search,
+  // with the user's own framing first so it carries the most weight.
+  const textToProcess = [item.notes, item.extracted_text].filter(Boolean).join('\n\n').trim()
+  if (!textToProcess) return {}
 
   let categorization = {}
+  let warning = null
 
-  try {
-    const { category, subcategory, summary, title, subtitle } = await categorizeAndSummarize(textToProcess)
-    // No spare column for a separate subtitle — pack "Title::subtitle" into
-    // the existing `title` text field and split it back apart on read.
-    const packedTitle = title && subtitle ? `${title}::${subtitle}` : title
-    categorization = { category, subcategory, summary, title: packedTitle }
-    await supabase.from('items').update(categorization).eq('id', item.id)
-  } catch (err) {
-    console.error(`Categorization failed for item ${item.id}:`, err.message)
+  if (!skipSummary) {
+    try {
+      const { category, subcategory, summary, title, subtitle } = await categorizeAndSummarize(textToProcess)
+      // No spare column for a separate subtitle — pack "Title::subtitle" into
+      // the existing `title` text field and split it back apart on read.
+      const packedTitle = title && subtitle ? `${title}::${subtitle}` : title
+      categorization = { category, subcategory, summary, title: packedTitle }
+      await supabase.from('items').update(categorization).eq('id', item.id)
+    } catch (err) {
+      console.error(`Categorization failed for item ${item.id}:`, err.message)
+      // Surface this instead of silently saving a summary-less item — the
+      // user explicitly asked for a summary, so they should know why it's
+      // missing (usually a quota limit).
+      warning =
+        err.name === 'QuotaExceededError'
+          ? "Saved, but couldn't generate the AI summary — today's AI limit has been reached."
+          : "Saved, but the AI summary couldn't be generated."
+    }
   }
 
   try {
     const embedding = await embedText(textToProcess)
-    if (!embedding) return
 
-    // v0 embeds one chunk per item, so re-running enrichment (e.g. a
-    // backfill after a transient failure) must replace, not duplicate, it.
-    await supabase.from('embeddings').delete().eq('item_id', item.id)
-    await supabase.from('embeddings').insert({
-      item_id: item.id,
-      user_id: item.user_id,
-      chunk_text: textToProcess,
-      embedding,
-    })
+    if (embedding) {
+      // v0 embeds one chunk per item, so re-running enrichment (e.g. a
+      // backfill after a transient failure) must replace, not duplicate, it.
+      await supabase.from('embeddings').delete().eq('item_id', item.id)
+      await supabase.from('embeddings').insert({
+        item_id: item.id,
+        user_id: item.user_id,
+        chunk_text: textToProcess,
+        embedding,
+      })
 
-    await checkForDuplicates(item, embedding)
+      await checkForDuplicates(item, embedding)
+    }
   } catch (err) {
     console.error(`Embedding/dedup failed for item ${item.id}:`, err.message)
   }
 
-  return categorization
+  return warning ? { ...categorization, warning } : categorization
 }
 
 async function checkForDuplicates(item, embedding) {
@@ -56,6 +72,10 @@ async function checkForDuplicates(item, embedding) {
     console.error(`Dedup lookup failed for item ${item.id}:`, error.message)
     return
   }
+
+  // Clear any prior verdict first — enrichment re-runs (backfills, edits)
+  // would otherwise stack redundant rows and inflate the duplicate count.
+  await supabase.from('duplicates').delete().eq('item_id', item.id)
 
   const match = data?.find((m) => m.item_id !== item.id && m.similarity >= DUPLICATE_THRESHOLD)
   if (!match) return

@@ -6,6 +6,8 @@ import { useToast } from '../components/ToastContext.jsx'
 import Card from '../components/Card.jsx'
 import Button from '../components/Button.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
+import EditableSection from '../components/EditableSection.jsx'
+import PostContent from '../components/PostContent.jsx'
 import { CategoryChip, DuplicateChip, Chip } from '../components/Chip.jsx'
 import SourceBadge from '../components/SourceBadge.jsx'
 import { SkeletonCard } from '../components/Skeleton.jsx'
@@ -25,7 +27,13 @@ function ItemDetail() {
   const fetchItem = async () => {
     setLoading(true)
     const res = await fetch(`${API_URL}/api/items/${id}`)
-    if (res.ok) setItem(await res.json())
+    if (res.ok) {
+      const data = await res.json()
+      setItem(data)
+      // No AI summary (skipped by choice) means the original content is the
+      // main thing to see, so show it expanded by default.
+      if (!data.summary) setShowOriginal(true)
+    }
     setLoading(false)
   }
 
@@ -51,6 +59,25 @@ function ItemDetail() {
     })
     showToast(isFavorite ? 'Removed from favorites' : 'Added to favorites')
     fetchItem()
+  }
+
+  const handleFieldSave = async (fields) => {
+    const res = await fetch(`${API_URL}/api/items/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fields),
+    })
+
+    if (!res.ok) {
+      showToast('Could not save your changes', 'error')
+      return
+    }
+
+    const updated = await res.json()
+    // Merge rather than replace: the PATCH response is the raw row and
+    // doesn't carry the computed duplicateOf/relatedItems fields.
+    setItem((prev) => ({ ...prev, ...updated }))
+    showToast('Saved')
   }
 
   const handleDelete = async () => {
@@ -93,7 +120,7 @@ function ItemDetail() {
         <div className="min-w-0 flex-1">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              <SourceBadge sourceType={item.source_type} />
+              <SourceBadge sourceType={item.source_type} linkType={item.link_type} />
               <CategoryChip category={item.category} />
               {item.subcategory && <Chip>{item.subcategory}</Chip>}
               {item.duplicateOf && <DuplicateChip similarity={item.duplicateOf.similarity} />}
@@ -134,14 +161,21 @@ function ItemDetail() {
             </Card>
           )}
 
-          <Card className="mb-4">
-            <p className="mb-2 text-caption font-medium uppercase tracking-wide text-text-secondary">
-              AI Summary
-            </p>
-            <p className="text-body text-text-primary">
-              {item.summary || <span className="italic text-text-secondary">summary pending...</span>}
-            </p>
-          </Card>
+          <EditableSection
+            label="AI Summary"
+            value={item.summary}
+            placeholder="Write a summary of this item..."
+            emptyLabel="No AI summary — add your own."
+            onSave={(next) => handleFieldSave({ summary: next })}
+          />
+
+          <EditableSection
+            label="My Notes"
+            value={item.notes}
+            placeholder="Why did you save this? What stood out?"
+            emptyLabel="No notes yet."
+            onSave={(next) => handleFieldSave({ notes: next })}
+          />
 
           <Card>
             <button
@@ -159,14 +193,33 @@ function ItemDetail() {
             {showOriginal && (
               <div className="mt-3">
                 {item.source_type === 'link' && (
-                  <a
-                    href={item.raw_content}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-sm text-primary hover:underline"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" /> {item.raw_content}
-                  </a>
+                  <div className="flex flex-col gap-4">
+                    <a
+                      href={item.raw_content}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 break-all text-caption text-text-secondary hover:text-primary"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 shrink-0" /> View original
+                    </a>
+
+                    {item.file_url && (
+                      <img
+                        src={item.file_url}
+                        alt=""
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                        }}
+                        className="w-full max-w-2xl rounded-xl border border-border-subtle"
+                      />
+                    )}
+
+                    {/* The whole point of the vault: read the post here
+                        instead of opening the original link again. */}
+                    {item.extracted_text && item.extracted_text !== item.raw_content && (
+                      <PostContent text={item.extracted_text} />
+                    )}
+                  </div>
                 )}
 
                 {item.source_type === 'image' && (
@@ -182,9 +235,7 @@ function ItemDetail() {
                         Original image not stored for this item (saved before file storage was added).
                       </p>
                     )}
-                    {item.extracted_text && (
-                      <p className="whitespace-pre-wrap text-sm text-text-secondary">{item.extracted_text}</p>
-                    )}
+                    {item.extracted_text && <PostContent text={item.extracted_text} />}
                   </div>
                 )}
 
@@ -205,9 +256,7 @@ function ItemDetail() {
                   ))}
 
                 {(item.source_type === 'linkedin_paste' || item.source_type === 'whatsapp_export') && (
-                  <p className="whitespace-pre-wrap text-sm text-text-secondary">
-                    {item.extracted_text || item.raw_content || 'No content stored.'}
-                  </p>
+                  <PostContent text={item.extracted_text || item.raw_content || 'No content stored.'} />
                 )}
               </div>
             )}
@@ -223,7 +272,7 @@ function ItemDetail() {
               <div className="flex justify-between">
                 <dt className="text-text-secondary">Source</dt>
                 <dd className="text-text-primary">
-                  <SourceBadge sourceType={item.source_type} />
+                  <SourceBadge sourceType={item.source_type} linkType={item.link_type} />
                 </dd>
               </div>
               <div className="flex justify-between">

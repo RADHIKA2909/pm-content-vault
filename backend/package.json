@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
+    "predev": "lsof -ti:${PORT:-3001} | xargs kill -9 2>/dev/null; exit 0",
     "dev": "node --watch server.js"
   },
   "dependencies": {

@@ -1,6 +1,35 @@
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
 export const EMBEDDING_DIMENSIONS = 768
 
+// flash-lite is built for high-volume classify/summarize work and has a far
+// more generous free-tier daily quota than full flash (which caps at 20
+// requests/day and gets exhausted almost immediately by any backfill).
+const TEXT_MODEL = 'gemini-flash-lite-latest'
+
+// Thrown when Gemini refuses due to quota so callers can tell the user
+// "you hit today's limit" instead of silently producing no summary.
+export class QuotaExceededError extends Error {
+  constructor() {
+    super("today's AI summary limit has been reached")
+    this.name = 'QuotaExceededError'
+  }
+}
+
+async function callGemini(model, body) {
+  const res = await fetch(`${GEMINI_BASE}/${model}:generateContent?key=${requireApiKey()}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+
+  if (res.status === 429) throw new QuotaExceededError()
+  if (!res.ok) {
+    throw new Error(`Gemini generateContent failed: ${res.status} ${await res.text()}`)
+  }
+
+  return res.json()
+}
+
 // Fixed taxonomy from CLAUDE.md — do not let the model invent new categories.
 export const CATEGORIES = [
   'Interview Questions',
@@ -25,7 +54,6 @@ function requireApiKey() {
 }
 
 export async function categorizeAndSummarize(text) {
-  const key = requireApiKey()
 
   const prompt = `Classify this saved PM (Product Manager) interview-prep content.
 
@@ -43,17 +71,7 @@ Content:
 ${text}
 """`
 
-  const res = await fetch(`${GEMINI_BASE}/gemini-flash-latest:generateContent?key=${key}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-  })
-
-  if (!res.ok) {
-    throw new Error(`Gemini generateContent failed: ${res.status} ${await res.text()}`)
-  }
-
-  const data = await res.json()
+  const data = await callGemini(TEXT_MODEL, { contents: [{ parts: [{ text: prompt }] }] })
   const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}'
   const cleaned = raw.trim().replace(/^```json\s*|```$/g, '')
   const parsed = JSON.parse(cleaned)
@@ -88,7 +106,6 @@ export async function embedText(text) {
 }
 
 export async function generateGroundedAnswer(query, chunks) {
-  const key = requireApiKey()
 
   const context = chunks.map((c, i) => `[${i + 1}] ${c.chunk_text}`).join('\n\n')
 
@@ -108,16 +125,6 @@ ${context}
 
 Question: ${query}`
 
-  const res = await fetch(`${GEMINI_BASE}/gemini-flash-latest:generateContent?key=${key}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-  })
-
-  if (!res.ok) {
-    throw new Error(`Gemini generateContent failed: ${res.status} ${await res.text()}`)
-  }
-
-  const data = await res.json()
+  const data = await callGemini(TEXT_MODEL, { contents: [{ parts: [{ text: prompt }] }] })
   return data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
 }

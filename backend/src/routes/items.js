@@ -21,7 +21,7 @@ router.get('/', async (req, res) => {
   let query = supabase
     .from('items')
     .select(
-      'id, source_type, raw_content, file_url, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag)',
+      'id, source_type, raw_content, file_url, link_type, notes, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag)',
     )
     .eq('user_id', process.env.DEFAULT_USER_ID)
     .order('created_at', { ascending: false })
@@ -80,7 +80,7 @@ router.get('/:id', async (req, res) => {
   const { data: item, error } = await supabase
     .from('items')
     .select(
-      'id, source_type, raw_content, extracted_text, file_url, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag)',
+      'id, source_type, raw_content, extracted_text, file_url, link_type, notes, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag)',
     )
     .eq('id', id)
     .eq('user_id', userId)
@@ -164,21 +164,46 @@ router.post('/', async (req, res) => {
 })
 
 // Paste a link — backend fetches the page and extracts title/body text.
+// User notes (optional) are prepended so their own framing takes priority
+// over the auto-extracted page text in both the summary and search.
+// linkType (linkedin/blog/other) drives the badge shown on the card; AI
+// summary is opt-in, off by default, same as image/pdf/whatsapp.
 router.post('/link', async (req, res) => {
-  const { url } = req.body
+  const { url, notes, linkType, generateSummary, skipFetch, manualContent } = req.body
 
   if (!url || !url.trim()) {
     return res.status(400).json({ error: 'url is required' })
   }
 
   try {
-    const { extractedText } = await extractFromUrl(url)
+    let fetchedText = null
+    let imageUrl = null
+
+    if (manualContent?.trim()) {
+      // User pasted the content themselves after a failed fetch.
+      fetchedText = manualContent.trim()
+    } else if (!skipFetch) {
+      const result = await extractFromUrl(url)
+      if (!result.ok) {
+        // Not a hard error — hand the reason back so the user can choose to
+        // save the bare link or paste the content in manually.
+        return res.status(422).json({ fetchFailed: true, reason: result.reason })
+      }
+      fetchedText = result.extractedText
+      imageUrl = result.imageUrl
+    }
+
     const item = await insertItem({
       sourceType: 'link',
       rawContent: url,
-      extractedText,
+      // Link-only saves still store the URL so the item stays searchable.
+      extractedText: fetchedText || url,
+      linkType: linkType || 'other',
+      notes,
+      // For links this is the post's own og:image, shown inline in detail.
+      fileUrl: imageUrl,
     })
-    const enrichment = await enrichItem(item)
+    const enrichment = await enrichItem(item, { skipSummary: generateSummary !== 'true' })
     res.status(201).json({ ...item, ...enrichment })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -187,15 +212,18 @@ router.post('/link', async (req, res) => {
 
 // Image OCR — OCR runs client-side (Tesseract.js) and the resulting text
 // is sent alongside the original image file, which is stored so the user
-// can view the exact image they saved later.
+// can view the exact image they saved later. User notes are optional and
+// combine with OCR text; AI summary is opt-in (off by default) since the
+// user may just want the image saved as-is.
 router.post('/image', upload.single('file'), async (req, res) => {
-  const { text } = req.body
+  const { text, notes, generateSummary } = req.body
 
   if (!req.file) {
     return res.status(400).json({ error: 'file is required' })
   }
-  if (!text || !text.trim()) {
-    return res.status(400).json({ error: 'text (OCR result) is required' })
+
+  if (!notes?.trim() && !text?.trim()) {
+    return res.status(400).json({ error: 'Add a note, or make sure the image has readable text' })
   }
 
   try {
@@ -205,18 +233,22 @@ router.post('/image', upload.single('file'), async (req, res) => {
     const item = await insertItem({
       sourceType: 'image',
       rawContent: req.file.originalname,
-      extractedText: text,
+      extractedText: text?.trim() || null,
       fileUrl,
+      notes,
     })
-    const enrichment = await enrichItem(item)
+    const enrichment = await enrichItem(item, { skipSummary: generateSummary !== 'true' })
     res.status(201).json({ ...item, ...enrichment })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
 })
 
-// PDF upload — text extraction happens server-side.
+// PDF upload — text extraction happens server-side. User notes are
+// optional and combine with the extracted text; AI summary is opt-in.
 router.post('/pdf', upload.single('file'), async (req, res) => {
+  const { notes, generateSummary } = req.body
+
   if (!req.file) {
     return res.status(400).json({ error: 'file is required' })
   }
@@ -230,8 +262,9 @@ router.post('/pdf', upload.single('file'), async (req, res) => {
       rawContent: req.file.originalname,
       extractedText: parsed.text.slice(0, 20000),
       fileUrl,
+      notes,
     })
-    const enrichment = await enrichItem(item)
+    const enrichment = await enrichItem(item, { skipSummary: generateSummary !== 'true' })
     res.status(201).json({ ...item, ...enrichment })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -239,9 +272,10 @@ router.post('/pdf', upload.single('file'), async (req, res) => {
 })
 
 // WhatsApp "Export Chat" .txt upload — parsed client-side into raw text,
-// parsed here into one item per message.
+// parsed here into one item per message. AI summary is opt-in for the
+// whole batch (applies to every parsed message).
 router.post('/whatsapp', async (req, res) => {
-  const { text } = req.body
+  const { text, generateSummary } = req.body
 
   if (!text || !text.trim()) {
     return res.status(400).json({ error: 'text (exported .txt contents) is required' })
@@ -261,7 +295,7 @@ router.post('/whatsapp', async (req, res) => {
     // hundreds of messages) don't block the HTTP response. Dashboard picks
     // up category/summary on next refresh once each item finishes.
     for (const item of items) {
-      enrichItem(item).catch((err) =>
+      enrichItem(item, { skipSummary: generateSummary !== 'true' }).catch((err) =>
         console.error(`Background enrichment failed for item ${item.id}:`, err.message),
       )
     }
@@ -287,6 +321,39 @@ router.post('/:id/tags', async (req, res) => {
 
   if (error) return res.status(500).json({ error: error.message })
   res.status(201).json(data)
+})
+
+// Edit an item's summary and/or notes from the detail view. Re-embeds
+// afterwards so edited text stays searchable and dedup stays accurate.
+router.patch('/:id', async (req, res) => {
+  const { id } = req.params
+  const { summary, notes } = req.body
+
+  const updates = {}
+  if (summary !== undefined) updates.summary = summary?.trim() || null
+  if (notes !== undefined) updates.notes = notes?.trim() || null
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'Nothing to update' })
+  }
+
+  const { data, error } = await supabase
+    .from('items')
+    .update(updates)
+    .eq('id', id)
+    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .select()
+    .single()
+
+  if (error) return res.status(500).json({ error: error.message })
+
+  // Refresh the embedding in the background — the user shouldn't wait on it.
+  // skipSummary keeps their edited summary intact instead of regenerating it.
+  enrichItem(data, { skipSummary: true }).catch((err) =>
+    console.error(`Re-embed after edit failed for item ${id}:`, err.message),
+  )
+
+  res.json(data)
 })
 
 // Remove a specific tag from an item (e.g. un-favoriting

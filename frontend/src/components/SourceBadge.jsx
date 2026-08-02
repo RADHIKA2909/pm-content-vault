@@ -8,8 +8,11 @@ const SOURCE_CONFIG = {
   link: { label: 'Web', Icon: LinkIcon },
 }
 
-function SourceBadge({ sourceType, showLabel = true }) {
-  const config = SOURCE_CONFIG[sourceType] || { label: sourceType, Icon: LinkIcon }
+function SourceBadge({ sourceType, linkType, showLabel = true }) {
+  const config =
+    sourceType === 'link' && linkType === 'linkedin'
+      ? { label: 'LinkedIn', Icon: Linkedin }
+      : SOURCE_CONFIG[sourceType] || { label: sourceType, Icon: LinkIcon }
   const { label, Icon } = config
 
   return (

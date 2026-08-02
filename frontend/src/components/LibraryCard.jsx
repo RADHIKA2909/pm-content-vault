@@ -15,7 +15,7 @@ function LibraryCard({ item, isFavorite, onOpen, onToggleFavorite, onDelete }) {
       <div className="relative h-36 w-full overflow-hidden">
         <SourceThumbnail item={item} />
         <span className="absolute left-2 top-2 rounded-full bg-surface/90 px-2 py-0.5 text-caption font-medium text-text-secondary backdrop-blur">
-          <SourceBadge sourceType={item.source_type} />
+          <SourceBadge sourceType={item.source_type} linkType={item.link_type} />
         </span>
         <button
           onClick={(e) => {
@@ -48,7 +48,9 @@ function LibraryCard({ item, isFavorite, onOpen, onToggleFavorite, onDelete }) {
           </>
         ) : (
           <p className="truncate text-body text-text-primary">
-            {item.summary || <span className="italic text-text-secondary">pending...</span>}
+            {item.summary || item.raw_content || (
+              <span className="italic text-text-secondary">No AI summary</span>
+            )}
           </p>
         )}
 
