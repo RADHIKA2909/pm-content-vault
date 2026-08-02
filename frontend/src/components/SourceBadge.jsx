@@ -1,11 +1,14 @@
-import { Linkedin, MessageCircle, FileText, Image as ImageIcon, Link as LinkIcon } from 'lucide-react'
+import { Linkedin, MessageCircle, FileText, Image as ImageIcon, Link as LinkIcon, NotebookPen, Type } from 'lucide-react'
 
 const SOURCE_CONFIG = {
+  text: { label: 'Text', Icon: Type },
+  // Legacy: pre-dates the 'text' type. Kept so old rows still render sensibly.
   linkedin_paste: { label: 'LinkedIn', Icon: Linkedin },
   whatsapp_export: { label: 'WhatsApp', Icon: MessageCircle },
   pdf: { label: 'PDF', Icon: FileText },
   image: { label: 'Image', Icon: ImageIcon },
   link: { label: 'Web', Icon: LinkIcon },
+  note: { label: 'My note', Icon: NotebookPen },
 }
 
 function SourceBadge({ sourceType, linkType, showLabel = true }) {

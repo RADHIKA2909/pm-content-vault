@@ -14,9 +14,6 @@ function LibraryCard({ item, isFavorite, onOpen, onToggleFavorite, onDelete }) {
     >
       <div className="relative h-36 w-full overflow-hidden">
         <SourceThumbnail item={item} />
-        <span className="absolute left-2 top-2 rounded-full bg-surface/90 px-2 py-0.5 text-caption font-medium text-text-secondary backdrop-blur">
-          <SourceBadge sourceType={item.source_type} linkType={item.link_type} />
-        </span>
         <button
           onClick={(e) => {
             e.stopPropagation()
@@ -33,10 +30,14 @@ function LibraryCard({ item, isFavorite, onOpen, onToggleFavorite, onDelete }) {
       </div>
 
       <div className="p-4">
+        {/* Source sits here rather than over the thumbnail — as an overlay it
+            covered the headline of image-heavy saves. */}
         <div className="mb-2 flex flex-wrap items-center gap-1.5">
           <CategoryChip category={item.category} />
           {item.duplicateOf && <DuplicateChip similarity={item.duplicateOf.similarity} />}
-          <span className="ml-auto text-caption text-text-secondary">
+          <span className="ml-auto flex shrink-0 items-center gap-1.5 text-caption text-text-secondary">
+            <SourceBadge sourceType={item.source_type} linkType={item.link_type} />
+            <span aria-hidden="true">·</span>
             {new Date(item.created_at).toLocaleDateString()}
           </span>
         </div>

@@ -160,7 +160,7 @@ function Dashboard() {
                 {chatHistory.slice(0, 3).map((q) => (
                   <li
                     key={q.id}
-                    onClick={() => navigate('/chat', { state: { resume: q } })}
+                    onClick={() => navigate('/chat', { state: { sessionId: q.session_id } })}
                     className="flex cursor-pointer items-start gap-2 rounded-xl px-2 py-1.5 hover:bg-muted"
                   >
                     <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-secondary" />
@@ -214,11 +214,13 @@ function Dashboard() {
         </div>
       )}
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Content">
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Content" size="lg">
         <Ingest
           onSaved={() => {
             setAddOpen(false)
-            fetchAll()
+            // Same rule as the sidebar: every save ends up in Library, showing
+            // the item that was just added.
+            navigate('/library', { state: { savedAt: Date.now() } })
           }}
         />
       </Modal>

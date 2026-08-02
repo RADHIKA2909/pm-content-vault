@@ -3,6 +3,7 @@ import { AlertCircle } from 'lucide-react'
 import { API_URL } from '../lib/api.js'
 import StatusMessage from './StatusMessage.jsx'
 import Button from './Button.jsx'
+import IngestOptions from './IngestOptions.jsx'
 
 const LINK_TYPES = [
   { value: 'linkedin', label: 'LinkedIn' },
@@ -105,23 +106,14 @@ function IngestLink({ onSaved }) {
           ))}
         </div>
 
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={3}
-          className="resize-none rounded-xl border border-border-subtle p-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
-          placeholder="Add your own notes about this link (optional)..."
+        <IngestOptions
+          notes={notes}
+          onNotesChange={setNotes}
+          generateSummary={generateSummary}
+          onGenerateSummaryChange={setGenerateSummary}
+          notesPlaceholder="Add your own notes about this link (optional)..."
+          summaryLabel="Generate AI summary for this link"
         />
-
-        <label className="flex items-center gap-2 text-sm text-text-secondary">
-          <input
-            type="checkbox"
-            checked={generateSummary}
-            onChange={(e) => setGenerateSummary(e.target.checked)}
-            className="h-4 w-4 rounded border-border-subtle text-primary focus:ring-primary"
-          />
-          Generate AI summary for this link
-        </label>
 
         {!fetchFailure && (
           <Button type="submit" className="self-start whitespace-nowrap">

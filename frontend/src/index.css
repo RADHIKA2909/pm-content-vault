@@ -5,3 +5,58 @@
 body {
   @apply bg-bg-app text-text-primary antialiased;
 }
+
+/* Freeform note bodies — shared by the contenteditable editor and the
+   read-only detail view, so a saved note looks the way it was written.
+   contenteditable has no placeholder attribute, hence the :empty rule. */
+.note-editor:empty::before {
+  content: attr(data-placeholder);
+  @apply text-text-secondary;
+}
+
+/* Tailwind's preflight strips list markers and link colour, so these have to
+   be restored explicitly — and on the editor too, not just the saved view, or
+   what you type looks nothing like what you get. */
+.note-body ul,
+.note-editor ul {
+  @apply my-2 list-disc pl-5;
+}
+
+.note-body ol,
+.note-editor ol {
+  @apply my-2 list-decimal pl-5;
+}
+
+.note-body p,
+.note-editor p {
+  @apply my-1.5;
+}
+
+.note-body h1,
+.note-body h2,
+.note-body h3,
+.note-editor h1,
+.note-editor h2,
+.note-editor h3 {
+  @apply my-2 font-semibold;
+}
+
+.note-body blockquote,
+.note-editor blockquote {
+  @apply my-2 border-l-2 border-border-subtle pl-3 text-text-secondary;
+}
+
+.note-body a,
+.note-editor a {
+  @apply text-primary underline;
+}
+
+.note-body img,
+.note-editor img {
+  @apply my-2 max-w-full rounded-xl;
+}
+
+.note-body code,
+.note-editor code {
+  @apply rounded bg-muted px-1 py-0.5 text-[13px];
+}

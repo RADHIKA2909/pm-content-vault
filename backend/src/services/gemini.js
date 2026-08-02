@@ -105,25 +105,98 @@ export async function embedText(text) {
   return data.embedding?.values ?? null
 }
 
-export async function generateGroundedAnswer(query, chunks) {
+// Keeps the prompt from ballooning as the vault grows — the index is a
+// scannable inventory, not the content itself (that's what excerpts are for).
+const MAX_INDEX_SUMMARY = 120
+const MAX_HISTORY_CHARS = 700
 
-  const context = chunks.map((c, i) => `[${i + 1}] ${c.chunk_text}`).join('\n\n')
+function truncate(text, max) {
+  if (!text) return ''
+  const clean = String(text).replace(/\s+/g, ' ').trim()
+  return clean.length > max ? `${clean.slice(0, max)}…` : clean
+}
 
-  const prompt = `Answer the question using ONLY the excerpts below from the user's own saved content.
+function formatVaultIndex(vaultIndex) {
+  if (!vaultIndex.length) return '(the vault is empty — nothing saved yet)'
+
+  return vaultIndex
+    .map((it) => {
+      const category = [it.category, it.subcategory].filter(Boolean).join(' / ') || 'Uncategorised'
+      const summary = truncate(it.summary, MAX_INDEX_SUMMARY)
+      return `- [${category}] ${it.title || 'Untitled'}${summary ? ` — ${summary}` : ''}`
+    })
+    .join('\n')
+}
+
+function formatHistory(history) {
+  if (!history.length) return '(this is the first message of the conversation)'
+
+  return history
+    .map((m) => `${m.role === 'user' ? 'User' : 'You'}: ${truncate(m.text, MAX_HISTORY_CHARS)}`)
+    .join('\n\n')
+}
+
+// The assistant is deliberately hybrid: grounded-with-citations when the vault
+// covers the question, but still a useful PM coach when it doesn't. Refusing
+// outright (the old behaviour) made it useless for meta questions like "what's
+// in my vault" and for follow-ups, which retrieval alone can never answer.
+export async function generateGroundedAnswer(
+  query,
+  chunks,
+  { vaultIndex = [], history = [], covered = false } = {},
+) {
+
+  const excerpts = chunks.length
+    ? chunks.map((c, i) => `[${i + 1}] ${c.chunk_text}`).join('\n\n')
+    : '(nothing saved matched this question)'
+
+  // Asking the model to judge whether its own answer came from the vault
+  // proved unreliable — it would flag a topic as missing while citing an
+  // excerpt from it. Retrieval already knows the answer, so state it as fact.
+  const coverage = covered
+    ? `The user HAS saved material on this topic — it's in the excerpts below. Never tell them it isn't in their vault. If what they saved doesn't cover the exact thing they asked for, be precise about the difference rather than dismissive (e.g. "you've got a piece saved on product sense, though no practice questions yet — so here are some of mine"), and always point at what they do have.`
+    : 'Nothing saved covers this specific question, so answer from your own knowledge and note that in one short clause. (Questions about the vault itself are the exception — answer those from the VAULT INDEX with no such note.)'
+
+  const prompt = `You are the assistant inside "PM Content Vault" — a personal vault where the user saves Product Manager interview-prep content. You are their study partner: part librarian for what they've saved, part PM interview coach.
+
+Work out which of these the message needs, and answer accordingly:
+
+1. ABOUT SAVED CONTENT ("what have I saved about RCA?", "explain that metrics framework") — answer from the EXCERPTS and cite them inline like [1], [2].
+2. ABOUT THE VAULT ITSELF ("what's in my vault?", "what topics do I have?", "what should I review?") — answer from the VAULT INDEX, which is the full list of what they've saved. Group by topic and describe each briefly. Do NOT put [n] citations on index entries — those numbers only ever refer to excerpts.
+3. ANYTHING ELSE — general PM knowledge, interview practice, mock questions, feedback on an answer, follow-ups, or plain conversation. Just answer it well, like a knowledgeable PM coach would.
+
+Rules:
+- Never refuse a question just because the vault doesn't cover it. Answer it from your own knowledge instead.
+- Before deciding something isn't in the vault, check the VAULT INDEX. If a listed item covers the topic, work from it and point the user to it — don't tell them they have nothing on a subject they've actually saved.
+- When you genuinely are going beyond their saved content, lead with the help, not the gap: agree to help first, mention in passing that it isn't in their vault yet, then answer. Vary the wording naturally — for example "Happy to help with this. Worth flagging that you haven't saved anything on it yet, so this is from my own knowledge —" or "Sure, I can walk you through it. Quick note: this isn't in your vault yet." Never open with a bare "Not in your vault".
+- Keep that note to one short clause. It's a passing aside, not a disclaimer paragraph, and it never appears more than once in an answer.
+- Only mention the gap when the answer really is your own knowledge. If you're drawing on their saved content, don't bring it up at all.
+- Never do both in one answer. If you cite even one excerpt, or lean on anything in the VAULT INDEX, then the topic IS in their vault — drop the note entirely. Saying "this isn't in your vault" next to a citation contradicts itself.
+- When the vault partly covers it, lead with what they saved (cited), then add your own knowledge, clearly marked as such.
+- Use CONVERSATION SO FAR to resolve follow-ups — "then what?", "explain more", "give me another" refer to the previous turn.
+- Only cite an excerpt you actually used. Never invent a citation number that isn't listed below.
+- Cite a source once, where you make the point. Don't repeat the same citation on every line.
 
 Formatting rules:
 - Use simple, plain language — write like you're explaining it to a friend, not writing a report.
 - Use a short markdown bullet list when the answer has multiple distinct points, steps, or examples.
 - Use 1-3 short plain sentences (no bullets) when the answer is a single, direct point.
-- Never use headings or bold section labels.
-- Cite excerpts inline like [1], [2], matching the excerpt numbers below.
-- Only cite an excerpt if you actually used it — do not cite excerpts you didn't draw from.
-- If the excerpts don't contain the answer, say so honestly in one short sentence instead of guessing.
+- A short bold lead-in inside a bullet is fine, but never use headings or standalone bold section labels.
+- Square brackets are ONLY for excerpt citations. Never bracket a category name or any other label.
 
-Excerpts:
-${context}
+VAULT COVERAGE (already determined — treat as fact, don't second-guess it):
+${coverage}
 
-Question: ${query}`
+VAULT INDEX (everything the user has saved):
+${formatVaultIndex(vaultIndex)}
+
+RELEVANT EXCERPTS (retrieved for this question):
+${excerpts}
+
+CONVERSATION SO FAR:
+${formatHistory(history)}
+
+User's message: ${query}`
 
   const data = await callGemini(TEXT_MODEL, { contents: [{ parts: [{ text: prompt }] }] })
   return data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''

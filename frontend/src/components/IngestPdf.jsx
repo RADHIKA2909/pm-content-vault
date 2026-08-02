@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { API_URL } from '../lib/api.js'
+import { renderPdfFirstPage } from '../lib/pdfThumbnail.js'
 import StatusMessage from './StatusMessage.jsx'
 import UploadField from './UploadField.jsx'
 import Button from './Button.jsx'
+import IngestOptions from './IngestOptions.jsx'
 
 function IngestPdf({ onSaved }) {
   const [file, setFile] = useState(null)
@@ -16,28 +18,37 @@ function IngestPdf({ onSaved }) {
   }
 
   const handleSave = async () => {
-    setStatus({ type: 'pending', message: 'Uploading and extracting text...' })
+    setStatus({ type: 'pending', message: 'Rendering preview...' })
 
     try {
+      // Best-effort: a PDF that won't render still saves, just without a
+      // card preview.
+      const thumbnail = await renderPdfFirstPage(file)
+
+      setStatus({ type: 'pending', message: 'Uploading and extracting text...' })
+
       const formData = new FormData()
       formData.append('file', file)
       formData.append('notes', notes)
       formData.append('generateSummary', generateSummary ? 'true' : 'false')
+      if (thumbnail) formData.append('thumbnail', thumbnail, 'page1.png')
 
       const res = await fetch(`${API_URL}/api/items/pdf`, {
         method: 'POST',
         body: formData,
       })
 
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Failed to save PDF')
-      }
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to save PDF')
 
       setFile(null)
       setNotes('')
       setGenerateSummary(false)
-      setStatus({ type: 'success', message: 'Saved.' })
+      setStatus(
+        data.warning
+          ? { type: 'error', message: data.warning }
+          : { type: 'success', message: 'Saved.' },
+      )
       onSaved?.()
     } catch (err) {
       setStatus({ type: 'error', message: err.message })
@@ -64,23 +75,14 @@ function IngestPdf({ onSaved }) {
             </button>
           </div>
 
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            className="resize-none rounded-xl border border-border-subtle p-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="Add your own notes about this PDF (optional)..."
+          <IngestOptions
+            notes={notes}
+            onNotesChange={setNotes}
+            generateSummary={generateSummary}
+            onGenerateSummaryChange={setGenerateSummary}
+            notesPlaceholder="Add your own notes about this PDF (optional)..."
+            summaryLabel="Generate AI summary for this PDF"
           />
-
-          <label className="flex items-center gap-2 text-sm text-text-secondary">
-            <input
-              type="checkbox"
-              checked={generateSummary}
-              onChange={(e) => setGenerateSummary(e.target.checked)}
-              className="h-4 w-4 rounded border-border-subtle text-primary focus:ring-primary"
-            />
-            Generate AI summary for this PDF
-          </label>
 
           <Button onClick={handleSave} className="self-start">
             Save

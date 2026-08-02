@@ -2,9 +2,12 @@ import { useState } from 'react'
 import { API_URL } from '../lib/api.js'
 import StatusMessage from './StatusMessage.jsx'
 import Button from './Button.jsx'
+import IngestOptions from './IngestOptions.jsx'
 
 function IngestText({ onSaved }) {
   const [text, setText] = useState('')
+  const [notes, setNotes] = useState('')
+  const [generateSummary, setGenerateSummary] = useState(false)
   const [status, setStatus] = useState(null)
 
   const handleSubmit = async (e) => {
@@ -15,16 +18,24 @@ function IngestText({ onSaved }) {
       const res = await fetch(`${API_URL}/api/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({
+          text,
+          notes,
+          generateSummary: generateSummary ? 'true' : 'false',
+        }),
       })
 
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Failed to save item')
-      }
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to save item')
 
       setText('')
-      setStatus({ type: 'success', message: 'Saved.' })
+      setNotes('')
+      setGenerateSummary(false)
+      setStatus(
+        data.warning
+          ? { type: 'error', message: data.warning }
+          : { type: 'success', message: 'Saved.' },
+      )
       onSaved?.()
     } catch (err) {
       setStatus({ type: 'error', message: err.message })
@@ -42,6 +53,16 @@ function IngestText({ onSaved }) {
           placeholder="Paste PM-prep content here..."
           required
         />
+
+        <IngestOptions
+          notes={notes}
+          onNotesChange={setNotes}
+          generateSummary={generateSummary}
+          onGenerateSummaryChange={setGenerateSummary}
+          notesPlaceholder="Add your own notes about this (optional)..."
+          summaryLabel="Generate AI summary for this text"
+        />
+
         <Button type="submit" className="self-start">
           Save
         </Button>

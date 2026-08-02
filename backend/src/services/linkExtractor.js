@@ -21,6 +21,99 @@ const LINKEDIN_POST_SELECTORS = [
   '.attributed-text-segment-list__content',
 ]
 
+const IMAGE_CHECK_TIMEOUT_MS = 6000
+// Below this in either dimension it's a tracking pixel, icon or avatar, not
+// artwork worth showing on a card.
+const MIN_THUMBNAIL_DIMENSION = 200
+const NON_ARTWORK_PATTERN = /sprite|icon|logo|avatar|placeholder|1x1|pixel|spacer|badge|button/i
+
+// Verifies an image URL actually resolves before it gets stored. Publishers
+// routinely leave a stale og:image behind (TechCrunch's points at a deleted
+// file), and an unchecked URL means a permanently blank card.
+async function imageResolves(url) {
+  try {
+    const res = await fetch(url, {
+      method: 'HEAD',
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PMContentVault/0.1)' },
+      signal: AbortSignal.timeout(IMAGE_CHECK_TIMEOUT_MS),
+    })
+    return res.ok && (res.headers.get('content-type') || '').startsWith('image/')
+  } catch {
+    return false
+  }
+}
+
+function absoluteUrl(src, pageUrl) {
+  try {
+    const resolved = new URL(src, pageUrl)
+    return /^https?:$/.test(resolved.protocol) ? resolved.href : null
+  } catch {
+    return null
+  }
+}
+
+// Ranked candidates: the publisher's declared social image first, then any
+// in-article artwork big enough to be meaningful.
+function imageCandidates($, pageUrl) {
+  const candidates = [
+    $('meta[property="og:image"]').attr('content'),
+    $('meta[property="og:image:url"]').attr('content'),
+    $('meta[name="twitter:image"]').attr('content'),
+    $('meta[name="twitter:image:src"]').attr('content'),
+    $('link[rel="image_src"]').attr('href'),
+  ]
+
+  $('article img, main img, figure img, img').each((_, el) => {
+    const $img = $(el)
+    const src = $img.attr('src') || $img.attr('data-src') || $img.attr('data-lazy-src')
+    if (!src || NON_ARTWORK_PATTERN.test(src)) return
+
+    // Only trust declared dimensions when present — many lazy-loaded images
+    // omit them entirely, and those are still worth trying.
+    const width = Number($img.attr('width')) || 0
+    const height = Number($img.attr('height')) || 0
+    if ((width && width < MIN_THUMBNAIL_DIMENSION) || (height && height < MIN_THUMBNAIL_DIMENSION)) return
+
+    candidates.push(src)
+  })
+
+  const seen = new Set()
+  return candidates
+    .map((src) => (src ? absoluteUrl(src.trim(), pageUrl) : null))
+    .filter((src) => src && !seen.has(src) && seen.add(src))
+}
+
+// First candidate that actually loads. Checked in order and capped, so a page
+// full of broken images can't stall the save.
+const MAX_IMAGE_CHECKS = 6
+
+// Image-only lookup for callers that just want artwork (a note containing a
+// link, say) and don't need the page's text extracted.
+export async function fetchPageImage(url) {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PMContentVault/0.1)' },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    })
+    if (!res.ok) return null
+    if (!(res.headers.get('content-type') || '').includes('text/html')) return null
+
+    return await pickPageImage(cheerio.load(await res.text()), url)
+  } catch {
+    return null
+  }
+}
+
+export async function pickPageImage($, pageUrl) {
+  const candidates = imageCandidates($, pageUrl).slice(0, MAX_IMAGE_CHECKS)
+
+  for (const candidate of candidates) {
+    if (await imageResolves(candidate)) return candidate
+  }
+
+  return null
+}
+
 // LinkedIn wraps outbound links in a tracking redirect; unwrap it so the
 // saved link points where the author actually intended.
 function unwrapRedirect(href) {
@@ -122,13 +215,10 @@ export async function extractFromUrl(url) {
   const html = await res.text()
   const $ = cheerio.load(html)
 
-  // Read meta tags before stripping anything — og:image is the post's own
-  // image, so the detail view can show it inline instead of making the
-  // user open the original link.
-  const imageUrl =
-    $('meta[property="og:image"]').attr('content') ||
-    $('meta[name="twitter:image"]').attr('content') ||
-    null
+  // Read meta tags before stripping anything — the post's own image lets the
+  // detail view show it inline instead of making the user open the original
+  // link, and gives the Library card real artwork.
+  const imageUrl = await pickPageImage($, url)
   const ogTitle = $('meta[property="og:title"]').attr('content') || ''
   const ogDescription = $('meta[property="og:description"]').attr('content') || ''
 

@@ -255,7 +255,18 @@ function ItemDetail() {
                     </p>
                   ))}
 
-                {(item.source_type === 'linkedin_paste' || item.source_type === 'whatsapp_export') && (
+                {/* Notes are stored as HTML so images, links and lists survive.
+                    Safe to render directly: the body was run through the
+                    allowlist sanitizer in services/noteContent.js before it
+                    was ever saved. */}
+                {item.source_type === 'note' && (
+                  <div
+                    className="note-body text-sm text-text-primary"
+                    dangerouslySetInnerHTML={{ __html: item.raw_content || '' }}
+                  />
+                )}
+
+                {['text', 'linkedin_paste', 'whatsapp_export'].includes(item.source_type) && (
                   <PostContent text={item.extracted_text || item.raw_content || 'No content stored.'} />
                 )}
               </div>

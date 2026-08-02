@@ -2,10 +2,11 @@ import { Router } from 'express'
 import multer from 'multer'
 import pdfParse from 'pdf-parse'
 import { insertItem, insertItems } from '../services/itemsRepo.js'
-import { extractFromUrl } from '../services/linkExtractor.js'
+import { extractFromUrl, fetchPageImage } from '../services/linkExtractor.js'
 import { parseWhatsappExport } from '../services/whatsappParser.js'
 import { enrichItem } from '../services/enrichItem.js'
 import { uploadFile } from '../services/fileStorage.js'
+import { sanitizeNoteHtml, noteHtmlToText, firstImageUrl, firstLinkUrl } from '../services/noteContent.js'
 import supabase from '../services/supabaseClient.js'
 
 const router = Router()
@@ -21,7 +22,7 @@ router.get('/', async (req, res) => {
   let query = supabase
     .from('items')
     .select(
-      'id, source_type, raw_content, file_url, link_type, notes, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag)',
+      'id, source_type, raw_content, file_url, thumbnail_url, link_type, notes, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag)',
     )
     .eq('user_id', process.env.DEFAULT_USER_ID)
     .order('created_at', { ascending: false })
@@ -80,7 +81,7 @@ router.get('/:id', async (req, res) => {
   const { data: item, error } = await supabase
     .from('items')
     .select(
-      'id, source_type, raw_content, extracted_text, file_url, link_type, notes, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag)',
+      'id, source_type, raw_content, extracted_text, file_url, thumbnail_url, link_type, notes, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag)',
     )
     .eq('id', id)
     .eq('user_id', userId)
@@ -142,9 +143,10 @@ router.get('/:id', async (req, res) => {
   })
 })
 
-// Paste text (e.g. a LinkedIn post pasted manually).
+// Paste text (e.g. a LinkedIn post pasted manually). Notes are optional
+// and stored separately; AI summary is opt-in, same as every other source.
 router.post('/', async (req, res) => {
-  const { text } = req.body
+  const { text, notes, generateSummary } = req.body
 
   if (!text || !text.trim()) {
     return res.status(400).json({ error: 'text is required' })
@@ -152,11 +154,14 @@ router.post('/', async (req, res) => {
 
   try {
     const item = await insertItem({
-      sourceType: 'linkedin_paste',
+      // Plain pasted text. Not 'linkedin_paste' — that badged every paste as
+      // LinkedIn regardless of where it actually came from.
+      sourceType: 'text',
       rawContent: text,
       extractedText: text,
+      notes,
     })
-    const enrichment = await enrichItem(item)
+    const enrichment = await enrichItem(item, { skipSummary: generateSummary !== 'true' })
     res.status(201).json({ ...item, ...enrichment })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -210,6 +215,57 @@ router.post('/link', async (req, res) => {
   }
 })
 
+// Images pasted into a note are uploaded on the spot so the stored HTML can
+// reference a real URL. Without this the browser would embed the whole image
+// as a base64 data URL, bloating the row and defeating the sanitizer's
+// http(s)-only rule.
+router.post('/note/image', upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'file is required' })
+
+  try {
+    const extension = (req.file.originalname?.split('.').pop() || 'png').toLowerCase()
+    const url = await uploadFile(req.file.buffer, extension, req.file.mimetype)
+    res.status(201).json({ url })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Freeform "own content" note — a notepad body mixing text, pasted images and
+// links. The HTML is stored for display and flattened to plain text for
+// embedding and categorisation.
+router.post('/note', async (req, res) => {
+  const { html, generateSummary } = req.body
+
+  const safeHtml = sanitizeNoteHtml(html)
+  const text = noteHtmlToText(safeHtml)
+
+  if (!text && !firstImageUrl(safeHtml)) {
+    return res.status(400).json({ error: 'Write something, or paste an image, before saving' })
+  }
+
+  try {
+    // Prefer an image the user actually pasted. Failing that, borrow artwork
+    // from the first link in the note so the card isn't a bare icon.
+    const pastedImage = firstImageUrl(safeHtml)
+    const linkedPage = pastedImage ? null : firstLinkUrl(safeHtml)
+    const thumbnail = pastedImage || (linkedPage ? await fetchPageImage(linkedPage) : null)
+
+    const item = await insertItem({
+      sourceType: 'note',
+      rawContent: safeHtml,
+      // Falls back to a placeholder for image-only notes so the row still
+      // categorises and embeds instead of failing on empty input.
+      extractedText: text || 'Saved image note',
+      fileUrl: thumbnail,
+    })
+    const enrichment = await enrichItem(item, { skipSummary: generateSummary !== 'true' })
+    res.status(201).json({ ...item, ...enrichment })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // Image OCR — OCR runs client-side (Tesseract.js) and the resulting text
 // is sent alongside the original image file, which is stored so the user
 // can view the exact image they saved later. User notes are optional and
@@ -244,24 +300,39 @@ router.post('/image', upload.single('file'), async (req, res) => {
   }
 })
 
-// PDF upload — text extraction happens server-side. User notes are
-// optional and combine with the extracted text; AI summary is opt-in.
-router.post('/pdf', upload.single('file'), async (req, res) => {
+// PDF upload — text extraction happens server-side. The optional `thumbnail`
+// is page 1 rendered to PNG in the browser (see lib/pdfThumbnail.js), which
+// avoids a native canvas dependency on the server. User notes are optional and
+// combine with the extracted text; AI summary is opt-in.
+router.post('/pdf', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]), async (req, res) => {
   const { notes, generateSummary } = req.body
+  const pdfFile = req.files?.file?.[0]
+  const thumbnailFile = req.files?.thumbnail?.[0]
 
-  if (!req.file) {
+  if (!pdfFile) {
     return res.status(400).json({ error: 'file is required' })
   }
 
   try {
-    const parsed = await pdfParse(req.file.buffer)
-    const fileUrl = await uploadFile(req.file.buffer, 'pdf', 'application/pdf')
+    const parsed = await pdfParse(pdfFile.buffer)
+    const fileUrl = await uploadFile(pdfFile.buffer, 'pdf', 'application/pdf')
+
+    // A failed preview upload must not lose the PDF itself.
+    let thumbnailUrl = null
+    if (thumbnailFile) {
+      try {
+        thumbnailUrl = await uploadFile(thumbnailFile.buffer, 'png', 'image/png')
+      } catch (err) {
+        console.error('PDF thumbnail upload failed:', err.message)
+      }
+    }
 
     const item = await insertItem({
       sourceType: 'pdf',
-      rawContent: req.file.originalname,
+      rawContent: pdfFile.originalname,
       extractedText: parsed.text.slice(0, 20000),
       fileUrl,
+      thumbnailUrl,
       notes,
     })
     const enrichment = await enrichItem(item, { skipSummary: generateSummary !== 'true' })
@@ -272,10 +343,10 @@ router.post('/pdf', upload.single('file'), async (req, res) => {
 })
 
 // WhatsApp "Export Chat" .txt upload — parsed client-side into raw text,
-// parsed here into one item per message. AI summary is opt-in for the
-// whole batch (applies to every parsed message).
+// parsed here into one item per message. Notes and the AI-summary choice
+// apply to the whole batch, since one upload becomes many items.
 router.post('/whatsapp', async (req, res) => {
-  const { text, generateSummary } = req.body
+  const { text, notes, generateSummary } = req.body
 
   if (!text || !text.trim()) {
     return res.status(400).json({ error: 'text (exported .txt contents) is required' })
@@ -288,7 +359,7 @@ router.post('/whatsapp', async (req, res) => {
   }
 
   try {
-    const items = await insertItems(parsedMessages)
+    const items = await insertItems(parsedMessages.map((m) => ({ ...m, notes })))
     res.status(201).json({ count: items.length, items })
 
     // Enrichment runs in the background so bulk exports (which can be

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import { API_URL } from '../lib/api.js'
 import { useToast } from '../components/ToastContext.jsx'
@@ -27,6 +27,7 @@ function Library() {
   const [error, setError] = useState(null)
   const [pendingDeleteId, setPendingDeleteId] = useState(null)
   const navigate = useNavigate()
+  const location = useLocation()
   const { showToast } = useToast()
 
   const fetchItems = async () => {
@@ -44,9 +45,13 @@ function Library() {
     }
   }
 
+  // Keyed on location.key so arriving here refetches every time — including
+  // when a save navigates to Library from Library, which doesn't remount the
+  // page and so would otherwise show a stale list until a manual refresh.
   useEffect(() => {
     fetchItems()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key])
 
   const categoryCounts = useMemo(() => {
     const counts = {}

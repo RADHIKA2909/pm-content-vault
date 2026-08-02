@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { X } from 'lucide-react'
 
-function Modal({ open, onClose, title, children }) {
+function Modal({ open, onClose, title, children, size = 'md' }) {
   useEffect(() => {
     if (!open) return
     const handleKey = (e) => e.key === 'Escape' && onClose()
@@ -18,7 +18,9 @@ function Modal({ open, onClose, title, children }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[85vh] w-full max-w-lg animate-modalIn overflow-y-auto rounded-2xl bg-surface p-6 shadow-xl"
+        className={`max-h-[85vh] w-full animate-modalIn overflow-y-auto rounded-2xl bg-surface p-6 shadow-xl ${
+          size === 'lg' ? 'max-w-3xl' : 'max-w-lg'
+        }`}
       >
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-text-primary">{title}</h3>

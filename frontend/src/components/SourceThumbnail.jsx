@@ -1,19 +1,23 @@
 import { useState } from 'react'
-import { Linkedin, MessageCircle, FileText, Image as ImageIcon, Link as LinkIcon } from 'lucide-react'
+import { Linkedin, MessageCircle, FileText, Image as ImageIcon, Link as LinkIcon, NotebookPen, Type } from 'lucide-react'
 
 const TILE_CONFIG = {
+  text: { Icon: Type, bg: 'bg-muted', fg: 'text-text-secondary' },
   linkedin_paste: { Icon: Linkedin, bg: 'bg-primary-light', fg: 'text-primary' },
   whatsapp_export: { Icon: MessageCircle, bg: 'bg-success/10', fg: 'text-success' },
   pdf: { Icon: FileText, bg: 'bg-warning/10', fg: 'text-warning' },
   image: { Icon: ImageIcon, bg: 'bg-secondary/10', fg: 'text-secondary' },
   link: { Icon: LinkIcon, bg: 'bg-muted', fg: 'text-text-secondary' },
+  note: { Icon: NotebookPen, bg: 'bg-accent-light', fg: 'text-accent' },
 }
 
-// PDFs also carry a file_url, but it points at the PDF itself and can't be
-// rendered as an image — only uploads and link previews have real artwork.
+// thumbnail_url is a purpose-made card image (a PDF's rendered first page).
+// file_url is the stored original, which only doubles as artwork when it
+// happens to be an image — for a PDF it points at the document itself and
+// can't be rendered.
 function previewImage(item) {
-  if (!item.file_url) return null
-  if (item.source_type === 'image' || item.source_type === 'link') return item.file_url
+  if (item.thumbnail_url) return item.thumbnail_url
+  if (item.file_url && ['image', 'link', 'note'].includes(item.source_type)) return item.file_url
   return null
 }
 

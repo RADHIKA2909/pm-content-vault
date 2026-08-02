@@ -3,6 +3,7 @@ import { API_URL } from '../lib/api.js'
 import StatusMessage from './StatusMessage.jsx'
 import UploadField from './UploadField.jsx'
 import Button from './Button.jsx'
+import IngestOptions from './IngestOptions.jsx'
 
 function readFileAsText(file) {
   return new Promise((resolve, reject) => {
@@ -15,6 +16,7 @@ function readFileAsText(file) {
 
 function IngestWhatsapp({ onSaved }) {
   const [file, setFile] = useState(null)
+  const [notes, setNotes] = useState('')
   const [generateSummary, setGenerateSummary] = useState(false)
   const [status, setStatus] = useState(null)
 
@@ -32,7 +34,11 @@ function IngestWhatsapp({ onSaved }) {
       const res = await fetch(`${API_URL}/api/items/whatsapp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, generateSummary: generateSummary ? 'true' : 'false' }),
+        body: JSON.stringify({
+          text,
+          notes,
+          generateSummary: generateSummary ? 'true' : 'false',
+        }),
       })
 
       if (!res.ok) {
@@ -42,6 +48,7 @@ function IngestWhatsapp({ onSaved }) {
 
       const { count } = await res.json()
       setFile(null)
+      setNotes('')
       setGenerateSummary(false)
       setStatus({ type: 'success', message: `Saved ${count} messages.` })
       onSaved?.()
@@ -70,15 +77,14 @@ function IngestWhatsapp({ onSaved }) {
             </button>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-text-secondary">
-            <input
-              type="checkbox"
-              checked={generateSummary}
-              onChange={(e) => setGenerateSummary(e.target.checked)}
-              className="h-4 w-4 rounded border-border-subtle text-primary focus:ring-primary"
-            />
-            Generate AI summary for every message in this export
-          </label>
+          <IngestOptions
+            notes={notes}
+            onNotesChange={setNotes}
+            generateSummary={generateSummary}
+            onGenerateSummaryChange={setGenerateSummary}
+            notesPlaceholder="Add a note about this chat export (applies to every message)..."
+            summaryLabel="Generate AI summary for every message in this export"
+          />
 
           <Button onClick={handleSave} className="self-start">
             Save

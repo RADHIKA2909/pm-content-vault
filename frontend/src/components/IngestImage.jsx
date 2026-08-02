@@ -4,6 +4,7 @@ import { API_URL } from '../lib/api.js'
 import StatusMessage from './StatusMessage.jsx'
 import UploadField from './UploadField.jsx'
 import Button from './Button.jsx'
+import IngestOptions from './IngestOptions.jsx'
 
 function IngestImage({ onSaved }) {
   const [file, setFile] = useState(null)
@@ -39,15 +40,17 @@ function IngestImage({ onSaved }) {
         body: formData,
       })
 
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Failed to save item')
-      }
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to save item')
 
       setFile(null)
       setNotes('')
       setGenerateSummary(false)
-      setStatus({ type: 'success', message: 'Saved.' })
+      setStatus(
+        data.warning
+          ? { type: 'error', message: data.warning }
+          : { type: 'success', message: 'Saved.' },
+      )
       onSaved?.()
     } catch (err) {
       setStatus({ type: 'error', message: err.message })
@@ -74,23 +77,14 @@ function IngestImage({ onSaved }) {
             </button>
           </div>
 
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            className="resize-none rounded-xl border border-border-subtle p-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="Add your own notes about this image (optional)..."
+          <IngestOptions
+            notes={notes}
+            onNotesChange={setNotes}
+            generateSummary={generateSummary}
+            onGenerateSummaryChange={setGenerateSummary}
+            notesPlaceholder="Add your own notes about this image (optional)..."
+            summaryLabel="Generate AI summary for this image"
           />
-
-          <label className="flex items-center gap-2 text-sm text-text-secondary">
-            <input
-              type="checkbox"
-              checked={generateSummary}
-              onChange={(e) => setGenerateSummary(e.target.checked)}
-              className="h-4 w-4 rounded border-border-subtle text-primary focus:ring-primary"
-            />
-            Generate AI summary for this image
-          </label>
 
           <Button onClick={handleSave} className="self-start">
             Save
