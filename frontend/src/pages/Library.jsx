@@ -6,7 +6,8 @@ import { useToast } from '../components/ToastContext.jsx'
 import LibraryCard from '../components/LibraryCard.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
 import { SkeletonCard } from '../components/Skeleton.jsx'
-import { CATEGORIES, FAVORITE_TAG, itemCategories } from '../lib/categories.js'
+import CategoryFilterBar from '../components/CategoryFilterBar.jsx'
+import { FAVORITE_TAG, itemCategories } from '../lib/categories.js'
 
 
 function Library() {
@@ -51,16 +52,6 @@ function Library() {
     }
     return counts
   }, [items])
-
-  // Most-used first, so the categories actually worth filtering by sit at the
-  // top. Unused taxonomy values still appear, just at the bottom; ties fall
-  // back to alphabetical so the order doesn't jitter between renders.
-  const allCategories = useMemo(() => {
-    const names = new Set([...CATEGORIES, ...Object.keys(categoryCounts)])
-    return [...names].sort(
-      (a, b) => (categoryCounts[b] || 0) - (categoryCounts[a] || 0) || a.localeCompare(b),
-    )
-  }, [categoryCounts])
 
   const visibleItems = useMemo(() => {
     let result = items
@@ -111,85 +102,66 @@ function Library() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 md:flex-row">
-        <aside className="shrink-0 md:w-48">
-          <div className="flex flex-col gap-0.5">
-            <button
-              onClick={() => setCategory('')}
-              className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${
-                category === '' ? 'bg-primary-light font-medium text-primary' : 'text-text-secondary hover:bg-muted'
-              }`}
-            >
-              All items <span className="text-caption">{items.length}</span>
-            </button>
-            {allCategories.map((c) => (
-              <button
-                key={c}
-                onClick={() => setCategory(c)}
-                className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${
-                  category === c ? 'bg-primary-light font-medium text-primary' : 'text-text-secondary hover:bg-muted'
-                }`}
-              >
-                {c} <span className="text-caption">{categoryCounts[c] || 0}</span>
-              </button>
-            ))}
-          </div>
-        </aside>
-
-        <div className="min-w-0 flex-1">
-          <div className="mb-4 flex gap-2">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search summaries, frameworks, companies..."
-                className="w-full rounded-xl border border-border-subtle bg-surface py-2.5 pl-9 pr-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value)}
-              className="rounded-xl border border-border-subtle bg-surface px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="newest">Newest</option>
-              <option value="oldest">Oldest</option>
-            </select>
-          </div>
-
-          {error && (
-            <p className="mb-4 rounded-xl bg-warning/10 px-3 py-2 text-sm text-warning">Error: {error}</p>
-          )}
-
-          {loading && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-              <SkeletonCard />
-              <SkeletonCard />
-            </div>
-          )}
-
-          {!loading && visibleItems.length === 0 && !error && (
-            <div className="py-16 text-center text-text-secondary">
-              <p className="text-sm">
-                {items.length === 0 ? 'Start building your PM knowledge vault.' : 'No items match your search.'}
-              </p>
-            </div>
-          )}
-
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-            {visibleItems.map((item) => (
-              <LibraryCard
-                key={item.id}
-                item={item}
-                isFavorite={item.tags?.some((t) => t.tag === FAVORITE_TAG)}
-                onOpen={(id) => navigate(`/library/${id}`)}
-                onToggleFavorite={handleToggleFavorite}
-                onDelete={(id) => setPendingDeleteId(id)}
-              />
-            ))}
-          </ul>
+      <div className="mb-3 flex gap-2">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search your vault — content, summaries, categories..."
+            className="w-full rounded-xl border border-border-subtle bg-surface py-2.5 pl-9 pr-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
+          />
         </div>
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value)}
+          className="rounded-xl border border-border-subtle bg-surface px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+        </select>
       </div>
+
+      <div className="mb-5">
+        <CategoryFilterBar
+          counts={categoryCounts}
+          total={items.length}
+          selected={category}
+          onSelect={setCategory}
+          query={search}
+        />
+      </div>
+
+      {error && <p className="mb-4 rounded-xl bg-warning/10 px-3 py-2 text-sm text-warning">Error: {error}</p>}
+
+      {loading && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      )}
+
+      {!loading && visibleItems.length === 0 && !error && (
+        <div className="py-16 text-center text-text-secondary">
+          <p className="text-sm">
+            {items.length === 0 ? 'Start building your PM knowledge vault.' : 'No items match your search.'}
+          </p>
+        </div>
+      )}
+
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+        {visibleItems.map((item) => (
+          <LibraryCard
+            key={item.id}
+            item={item}
+            isFavorite={item.tags?.some((t) => t.tag === FAVORITE_TAG)}
+            onOpen={(id) => navigate(`/library/${id}`)}
+            onToggleFavorite={handleToggleFavorite}
+            onDelete={(id) => setPendingDeleteId(id)}
+          />
+        ))}
+      </ul>
 
       <ConfirmModal
         open={pendingDeleteId !== null}

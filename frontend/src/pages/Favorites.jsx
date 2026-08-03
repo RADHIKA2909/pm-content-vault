@@ -53,7 +53,7 @@ function Favorites() {
       <p className="mb-6 text-body text-text-secondary">{favorites.length} starred</p>
 
       {loading && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           <SkeletonCard />
           <SkeletonCard />
         </div>
@@ -66,7 +66,7 @@ function Favorites() {
         </div>
       )}
 
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {favorites.map((item) => (
           <LibraryCard
             key={item.id}

@@ -60,3 +60,14 @@ body {
 .note-editor code {
   @apply rounded bg-muted px-1 py-0.5 text-[13px];
 }
+
+/* Browsers default <mark> to a harsh yellow; soften it to match the palette. */
+.note-body mark,
+.note-editor mark {
+  @apply rounded bg-warning/25 px-0.5 text-text-primary;
+}
+
+.note-body u,
+.note-editor u {
+  @apply underline;
+}

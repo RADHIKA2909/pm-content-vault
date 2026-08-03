@@ -9,7 +9,13 @@ import { CATEGORIES, embedText, generateGroundedAnswer } from '../services/gemin
 import { sanitizeCitations, referencedIndexes } from '../services/citations.js'
 import { loadVaultIndex } from '../services/vaultIndex.js'
 import { uploadFile } from '../services/fileStorage.js'
-import { sanitizeNoteHtml, noteHtmlToText, firstImageUrl, firstLinkUrl } from '../services/noteContent.js'
+import {
+  sanitizeNoteHtml,
+  noteHtmlToText,
+  firstImageUrl,
+  firstLinkUrl,
+  htmlToStructuredText,
+} from '../services/noteContent.js'
 import supabase from '../services/supabaseClient.js'
 
 const router = Router()
@@ -167,7 +173,7 @@ router.get('/:id', async (req, res) => {
   const { data: item, error } = await supabase
     .from('items')
     .select(
-      'id, source_type, raw_content, extracted_text, file_url, thumbnail_url, link_type, notes, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag), item_categories(category)',
+      'id, source_type, raw_content, extracted_text, formatted_content, file_url, thumbnail_url, link_type, notes, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag), item_categories(category)',
     )
     .eq('id', id)
     .eq('user_id', userId)
@@ -522,11 +528,26 @@ router.post('/:id/tags', async (req, res) => {
 // edited text stays searchable and dedup stays accurate.
 router.patch('/:id', async (req, res) => {
   const { id } = req.params
-  const { summary, notes, categories, title, subtitle } = req.body
+  const { summary, notes, categories, title, subtitle, formattedContent } = req.body
 
   const updates = {}
   if (summary !== undefined) updates.summary = summary?.trim() || null
   if (notes !== undefined) updates.notes = notes?.trim() || null
+
+  // Formatted content is the user's presentation of the item. The plain-text
+  // version is refreshed alongside it so search, chat and dedup reflect what
+  // they can actually see — links survive the conversion as [label](url).
+  if (formattedContent !== undefined) {
+    const safeHtml = sanitizeNoteHtml(formattedContent)
+    const plain = htmlToStructuredText(safeHtml)
+
+    if (!plain && !safeHtml.includes('<img')) {
+      return res.status(400).json({ error: "Content can't be empty" })
+    }
+
+    updates.formatted_content = safeHtml
+    updates.extracted_text = plain
+  }
 
   // Categories live in their own table, so they're applied separately rather
   // than as a column update. Any label is allowed — the user can invent their

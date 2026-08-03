@@ -8,6 +8,7 @@ import Button from '../components/Button.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
 import EditableSection from '../components/EditableSection.jsx'
 import PostContent from '../components/PostContent.jsx'
+import RichTextEditor from '../components/RichTextEditor.jsx'
 import { DuplicateChip, Chip } from '../components/Chip.jsx'
 import CategoryPicker from '../components/CategoryPicker.jsx'
 import ItemChatPanel from '../components/ItemChatPanel.jsx'
@@ -15,6 +16,34 @@ import SourceBadge from '../components/SourceBadge.jsx'
 import { SkeletonCard } from '../components/Skeleton.jsx'
 import { MAX_CATEGORIES, FAVORITE_TAG, itemCategories } from '../lib/categories.js'
 import { parseTitle } from '../lib/parseTitle.js'
+import { structuredTextToHtml } from '../lib/contentHtml.js'
+
+// The item's text body. A formatted version wins when the user has made one;
+// otherwise the original extraction is rendered as before.
+//
+// Rendering the HTML directly is safe: it passed the allowlist sanitizer in
+// services/noteContent.js on the way in.
+function ContentBody({ item }) {
+  if (item.formatted_content) {
+    return (
+      <div
+        className="note-body text-sm text-text-primary"
+        dangerouslySetInnerHTML={{ __html: item.formatted_content }}
+      />
+    )
+  }
+
+  if (item.source_type === 'note') {
+    return (
+      <div
+        className="note-body text-sm text-text-primary"
+        dangerouslySetInnerHTML={{ __html: item.raw_content || '' }}
+      />
+    )
+  }
+
+  return <PostContent text={item.extracted_text || item.raw_content || 'No content stored.'} />
+}
 
 function ItemDetail() {
   const { id } = useParams()
@@ -22,12 +51,16 @@ function ItemDetail() {
   const { showToast } = useToast()
   const [item, setItem] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [showOriginal, setShowOriginal] = useState(false)
+  // Open by default — the content is the reason you opened the item.
+  const [showOriginal, setShowOriginal] = useState(true)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const [subtitleDraft, setSubtitleDraft] = useState('')
   const [addingCategory, setAddingCategory] = useState(false)
+  const [editingContent, setEditingContent] = useState(false)
+  const [contentDraft, setContentDraft] = useState('')
+  const contentEditorRef = useRef(null)
   const engagedIdRef = useRef(null)
 
   // `silent` re-reads the item without swapping the page for a skeleton —
@@ -39,9 +72,6 @@ function ItemDetail() {
     if (res.ok) {
       const data = await res.json()
       setItem(data)
-      // No AI summary (skipped by choice) means the original content is the
-      // main thing to see, so show it expanded by default.
-      if (!data.summary) setShowOriginal(true)
     }
     if (!silent) setLoading(false)
   }
@@ -105,6 +135,27 @@ function ItemDetail() {
   const saveTitle = async () => {
     await handleFieldSave({ title: titleDraft, subtitle: subtitleDraft })
     setEditingTitle(false)
+  }
+
+  // Notes are already HTML; everything else is plain text that has to be
+  // converted for the editor — links included, or they'd be lost on save.
+  const startEditingContent = () => {
+    const existing =
+      item.formatted_content ||
+      (item.source_type === 'note' ? item.raw_content : structuredTextToHtml(item.extracted_text))
+    setContentDraft(existing || '')
+    setEditingContent(true)
+    setShowOriginal(true)
+  }
+
+  const saveContent = async () => {
+    const html = contentEditorRef.current?.getHtml() || ''
+    if (!contentEditorRef.current?.getText()?.trim() && !html.includes('<img')) {
+      showToast("Content can't be empty", 'error')
+      return
+    }
+    await handleFieldSave({ formattedContent: html })
+    setEditingContent(false)
   }
 
   // At least one category must remain — the picker and the chip row both
@@ -294,19 +345,51 @@ function ItemDetail() {
           />
 
           <Card>
-            <button
-              onClick={() => setShowOriginal((v) => !v)}
-              className="flex w-full items-center justify-between text-left"
-            >
-              <p className="text-caption font-medium uppercase tracking-wide text-text-secondary">
-                Original Content
-              </p>
-              <ChevronDown
-                className={`h-4 w-4 text-text-secondary transition-transform ${showOriginal ? 'rotate-180' : ''}`}
-              />
-            </button>
+            <div className="flex w-full items-center justify-between gap-2">
+              <button
+                onClick={() => setShowOriginal((v) => !v)}
+                className="flex min-w-0 flex-1 items-center justify-between text-left"
+              >
+                <p className="text-caption font-medium uppercase tracking-wide text-text-secondary">
+                  {item.formatted_content ? 'Content' : 'Original Content'}
+                </p>
+              </button>
 
-            {showOriginal && (
+              <div className="flex shrink-0 items-center gap-1">
+                {!editingContent && (
+                  <button
+                    onClick={startEditingContent}
+                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-caption font-medium text-text-secondary transition-colors hover:bg-muted hover:text-text-primary"
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> Edit content
+                  </button>
+                )}
+                <button onClick={() => setShowOriginal((v) => !v)} aria-label="Toggle content">
+                  <ChevronDown
+                    className={`h-4 w-4 text-text-secondary transition-transform ${showOriginal ? 'rotate-180' : ''}`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {showOriginal && editingContent && (
+              <div className="mt-3 flex flex-col gap-3">
+                <RichTextEditor
+                  ref={contentEditorRef}
+                  initialHtml={contentDraft}
+                  onStatus={(s) => s?.type === 'error' && showToast(s.message, 'error')}
+                  placeholder="Edit this content — bold, underline, highlight..."
+                />
+                <div className="flex items-center gap-2">
+                  <Button onClick={saveContent}>Save</Button>
+                  <Button variant="ghost" onClick={() => setEditingContent(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {showOriginal && !editingContent && (
               <div className="mt-3">
                 {item.source_type === 'link' && (
                   <div className="flex flex-col gap-4">
@@ -332,8 +415,9 @@ function ItemDetail() {
 
                     {/* The whole point of the vault: read the post here
                         instead of opening the original link again. */}
-                    {item.extracted_text && item.extracted_text !== item.raw_content && (
-                      <PostContent text={item.extracted_text} />
+                    {(item.formatted_content ||
+                      (item.extracted_text && item.extracted_text !== item.raw_content)) && (
+                      <ContentBody item={item} />
                     )}
                   </div>
                 )}
@@ -351,7 +435,7 @@ function ItemDetail() {
                         Original image not stored for this item (saved before file storage was added).
                       </p>
                     )}
-                    {item.extracted_text && <PostContent text={item.extracted_text} />}
+                    {(item.formatted_content || item.extracted_text) && <ContentBody item={item} />}
                   </div>
                 )}
 
@@ -371,19 +455,20 @@ function ItemDetail() {
                     </p>
                   ))}
 
+                {item.source_type === 'pdf' && item.formatted_content && (
+                  <div className="mt-3">
+                    <ContentBody item={item} />
+                  </div>
+                )}
+
                 {/* Notes are stored as HTML so images, links and lists survive.
                     Safe to render directly: the body was run through the
                     allowlist sanitizer in services/noteContent.js before it
                     was ever saved. */}
-                {item.source_type === 'note' && (
-                  <div
-                    className="note-body text-sm text-text-primary"
-                    dangerouslySetInnerHTML={{ __html: item.raw_content || '' }}
-                  />
-                )}
+                {item.source_type === 'note' && <ContentBody item={item} />}
 
                 {['text', 'linkedin_paste', 'whatsapp_export'].includes(item.source_type) && (
-                  <PostContent text={item.extracted_text || item.raw_content || 'No content stored.'} />
+                  <ContentBody item={item} />
                 )}
               </div>
             )}
