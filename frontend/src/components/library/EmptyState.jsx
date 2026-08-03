@@ -93,9 +93,16 @@ const VARIANTS = {
   },
 }
 
-function EmptyState({ variant, detail, onAction }) {
+// `actionLabel` and `body` can be overridden because the same variant is used
+// from two places with two different actions: Library's favourites filter
+// clears back to everything ("Show all items"), while the Favorites page sends
+// you somewhere else entirely ("Browse Library"). One label can't be right for
+// both, and a button that misnames where it goes is worse than a plain one.
+function EmptyState({ variant, detail, onAction, actionLabel: labelOverride, body: bodyOverride }) {
   const config = VARIANTS[variant] || VARIANTS['no-results']
-  const { Art, title, body, actionLabel, ActionIcon } = config
+  const { Art, title, ActionIcon } = config
+  const body = bodyOverride || config.body
+  const actionLabel = labelOverride || config.actionLabel
 
   return (
     <div className="flex animate-cardIn flex-col items-center justify-center rounded-2xl bg-surface px-6 py-14 text-center shadow-card ring-1 ring-border-subtle">

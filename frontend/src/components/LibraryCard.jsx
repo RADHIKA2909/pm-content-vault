@@ -1,5 +1,6 @@
 import { forwardRef } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
+import { ArrowRight, Check } from 'lucide-react'
 import { CategoryChip, DuplicateChip } from './Chip.jsx'
 import SourceBadge from './SourceBadge.jsx'
 import SourceThumbnail from './SourceThumbnail.jsx'
@@ -16,6 +17,10 @@ import { savedAgo } from '../lib/relativeTime.js'
 // attaches a ref to its direct child to measure the card before lifting it out
 // of flow. A plain function component silently drops that ref and the exit
 // animation mispositions.
+// `footerNote`, `selectable`, `selected` and `onSelect` are additive and all
+// default to off, so Library and the Ask My Vault examples render exactly as
+// they did before Favorites existed. This card is shared; changing it for one
+// page would change it for all three.
 const LibraryCard = forwardRef(function LibraryCard(
   {
     item,
@@ -28,6 +33,11 @@ const LibraryCard = forwardRef(function LibraryCard(
     view = 'grid',
     isNew = false,
     delay = 0,
+    footerNote = null,
+    hoverOpen = false,
+    selectable = false,
+    selected = false,
+    onSelect,
   },
   ref,
 ) {
@@ -50,7 +60,10 @@ const LibraryCard = forwardRef(function LibraryCard(
   // top level it would also delay `layout` and `whileHover`, so a card would
   // pause before sliding into its new slot, and hover would feel unresponsive.
   const reduceMotion = useReducedMotion()
-  const lift = view === 'list' ? -1 : -3
+  // A grid card lifts further than a list row: it has the room, and in a grid
+  // the lift is the only thing separating the card under the pointer from the
+  // eight around it.
+  const lift = view === 'list' ? -2 : -4
   const motionProps = reduceMotion
     ? {}
     : {
@@ -67,7 +80,21 @@ const LibraryCard = forwardRef(function LibraryCard(
         whileHover: { y: lift, transition: { duration: 0.2, ease: 'easeOut' } },
       }
 
-  const open = () => onOpen(item.id)
+  // While selecting, clicking a card toggles it instead of navigating away —
+  // the one thing that reliably ruins a bulk selection is losing the page
+  // halfway through building it.
+  const open = () => (selectable ? onSelect?.(item.id) : onOpen(item.id))
+
+  const checkbox = selectable && (
+    <span
+      aria-hidden="true"
+      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md ring-1 transition-colors duration-200 ${
+        selected ? 'bg-primary text-white ring-primary' : 'bg-surface/95 ring-border-subtle'
+      }`}
+    >
+      {selected && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+    </span>
+  )
   const shared = {
     isFavorite,
     onOpen: open,
@@ -78,8 +105,10 @@ const LibraryCard = forwardRef(function LibraryCard(
   }
 
   // The just-saved item gets a ring so it's findable in a full grid without
-  // having to scan dates.
-  const outline = isNew ? 'ring-2 ring-primary' : 'ring-1 ring-border-subtle'
+  // having to scan dates. A selected card takes the same treatment, since both
+  // mean "this one, out of all of these".
+  const outline =
+    selected || isNew ? 'ring-2 ring-primary' : 'ring-1 ring-border-subtle'
 
   // Raise the whole card while its overflow menu is open.
   //
@@ -108,10 +137,12 @@ const LibraryCard = forwardRef(function LibraryCard(
         role="button"
         tabIndex={0}
         aria-label={headline}
-        className={`group flex cursor-pointer items-center gap-4 rounded-2xl bg-surface p-3 shadow-raised transition-shadow duration-200 hover:shadow-card-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${raised} ${outline}`}
+        className={`group flex cursor-pointer items-center gap-4 rounded-2xl bg-surface p-3 shadow-raised transition-shadow duration-200 hover:shadow-lifted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${raised} ${outline}`}
       >
+        {selectable && checkbox}
+
         <div className="h-[58px] w-[86px] shrink-0 overflow-hidden rounded-xl bg-muted">
-          <div className="h-full w-full transition-transform duration-300 group-hover:scale-[1.02]">
+          <div className="h-full w-full transition-[transform,filter] duration-300 group-hover:scale-[1.03] group-hover:brightness-[1.06]">
             <SourceThumbnail item={item} />
           </div>
         </div>
@@ -120,6 +151,12 @@ const LibraryCard = forwardRef(function LibraryCard(
           <p className="truncate text-[15px] font-medium text-text-primary">{headline}</p>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
             {meta}
+            {footerNote && (
+              <>
+                <span aria-hidden="true" className="text-text-secondary">·</span>
+                <span className="text-caption text-text-secondary">{footerNote}</span>
+              </>
+            )}
             {item.duplicateOf && <DuplicateChip similarity={item.duplicateOf.similarity} />}
             {categories.map((category) => (
               <CategoryChip key={category} category={category} />
@@ -146,18 +183,37 @@ const LibraryCard = forwardRef(function LibraryCard(
       role="button"
       tabIndex={0}
       aria-label={headline}
-      className={`group flex h-full cursor-pointer flex-col rounded-2xl bg-surface shadow-raised transition-shadow duration-200 hover:shadow-card-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${raised} ${outline}`}
+      className={`group flex h-full cursor-pointer flex-col rounded-2xl bg-surface shadow-raised transition-shadow duration-200 hover:shadow-lifted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${raised} ${outline}`}
     >
       {/* Clipping lives here, not on the card, so the overflow menu can escape
           the card's bounds. */}
       <div className="relative aspect-[16/10] w-full overflow-hidden rounded-t-2xl bg-muted">
-        <div className="h-full w-full transition-transform duration-300 group-hover:scale-[1.02]">
+        <div className="h-full w-full transition-[transform,filter] duration-300 group-hover:scale-[1.03] group-hover:brightness-[1.06]">
           <SourceThumbnail item={item} />
         </div>
 
         {item.duplicateOf && (
           <span className="absolute left-2 top-2">
             <DuplicateChip similarity={item.duplicateOf.similarity} />
+          </span>
+        )}
+
+        {selectable && <span className="absolute right-2 top-2">{checkbox}</span>}
+
+        {/* Opt-in: the Library's whole card is already obviously clickable in a
+            page of nothing but cards. On Favorites, where cards sit beside
+            panels and a selection mode, saying so is worth the pixels. */}
+        {hoverOpen && !selectable && (
+          // No scrim. One was there and it fought the brightening underneath —
+          // the two cancelled out and the thumbnail read as *dimmer* on hover.
+          // The pill carries its own contrast instead: solid surface, a ring so
+          // it stays defined on a pale thumbnail, and a shadow so it does on a
+          // busy one.
+          <span className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+            <span className="inline-flex translate-y-1 items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-caption font-semibold text-text-primary shadow-card-hover ring-1 ring-border-subtle transition-transform duration-200 group-hover:translate-y-0">
+              Open
+              <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.25} />
+            </span>
           </span>
         )}
       </div>
@@ -187,6 +243,12 @@ const LibraryCard = forwardRef(function LibraryCard(
           <div className="-mx-4 -mb-1 flex items-center gap-0.5 border-t border-border-subtle px-3 pt-2">
             {onToggleFavorite && (
               <FavoriteButton isFavorite={isFavorite} onToggle={() => onToggleFavorite(item.id, isFavorite)} />
+            )}
+            {/* Fills the dead space between the star and the menu. Favorites
+                passes "Starred 4h ago"; Library passes nothing and the row
+                looks exactly as it always has. */}
+            {footerNote && (
+              <span className="min-w-0 truncate text-[11px] text-text-secondary">{footerNote}</span>
             )}
             <span className="ml-auto">
               <CardMenu {...shared} />

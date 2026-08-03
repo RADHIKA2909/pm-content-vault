@@ -58,6 +58,27 @@ export const SORTS = [
   { value: 'za', label: 'Title Z–A' },
 ]
 
+// Favorites sorts by when you starred something and when you last opened it,
+// neither of which the Library offers — on this page "recent" means recently
+// singled out, not recently saved.
+export const FAVORITE_SORTS = [
+  { value: 'starred', label: 'Recently starred' },
+  { value: 'opened', label: 'Recently opened' },
+  { value: 'az', label: 'Alphabetical' },
+  { value: 'oldest', label: 'Oldest first' },
+]
+
+/**
+ * When an item was starred — the `favorite` tag's own created_at.
+ *
+ * The list endpoint has returned this all along (`tags(tag, created_at)`) and
+ * nothing has ever read it. It's what makes "Starred 4h ago" and the whole
+ * recently-starred sort possible without a schema change.
+ */
+export function starredAt(item) {
+  return item.tags?.find((t) => t.tag === FAVORITE_TAG)?.created_at || null
+}
+
 export const DEFAULT_FILTERS = { source: '', date: '', duplicates: '', archived: '', favoritesOnly: false }
 
 export const activeFilterCount = (f) =>
@@ -105,8 +126,6 @@ export function filterItems(items, { search = '', category = '', filters = DEFAU
 // top under an empty string.
 export function sortItems(items, sort) {
   const byDate = (a, b) => new Date(b.created_at) - new Date(a.created_at)
-  const titleOf = (i) =>
-    (i.title || i.summary || i.raw_content || '').split('::')[0].trim().toLowerCase()
 
   return [...items].sort((a, b) => {
     if (sort === 'oldest') return -byDate(a, b)
@@ -118,6 +137,38 @@ export function sortItems(items, sort) {
       return sort === 'az' ? ta.localeCompare(tb) : tb.localeCompare(ta)
     }
     return byDate(a, b)
+  })
+}
+
+// The same fallback chain the card prints, so an alphabetical sort agrees with
+// what's actually on screen. Shared with sortItems above for that reason.
+const titleOf = (item) =>
+  (item.title || item.summary || item.raw_content || '').split('::')[0].trim().toLowerCase()
+
+/**
+ * Sorting for the Favorites page.
+ *
+ * `opened` falls back to the save date for anything never opened — sorting
+ * those to the very bottom would bury a brand-new favourite you starred a
+ * minute ago simply because you haven't clicked into it yet.
+ */
+export function sortFavorites(items, sort) {
+  const time = (value) => (value ? new Date(value).getTime() : 0)
+
+  return [...items].sort((a, b) => {
+    if (sort === 'opened') {
+      return time(b.last_engaged_at || b.created_at) - time(a.last_engaged_at || a.created_at)
+    }
+    if (sort === 'oldest') return time(a.created_at) - time(b.created_at)
+    if (sort === 'az') {
+      const [ta, tb] = [titleOf(a), titleOf(b)]
+      if (!ta && !tb) return 0
+      if (!ta) return 1
+      if (!tb) return -1
+      return ta.localeCompare(tb)
+    }
+    // Recently starred, the default.
+    return time(starredAt(b)) - time(starredAt(a))
   })
 }
 
