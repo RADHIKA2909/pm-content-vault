@@ -1,7 +1,19 @@
-import { Linkedin, MessageCircle, FileText, Image as ImageIcon, Link as LinkIcon, NotebookPen, Type } from 'lucide-react'
+import {
+  Briefcase,
+  FileText,
+  HelpCircle,
+  Image as ImageIcon,
+  Link as LinkIcon,
+  Linkedin,
+  MessageCircle,
+  NotebookPen,
+  Type,
+} from 'lucide-react'
 
 const SOURCE_CONFIG = {
   text: { label: 'Text', Icon: Type },
+  question: { label: 'Interview Q', Icon: HelpCircle },
+  job: { label: 'Job', Icon: Briefcase },
   // Legacy: pre-dates the 'text' type. Kept so old rows still render sensibly.
   linkedin_paste: { label: 'LinkedIn', Icon: Linkedin },
   whatsapp_export: { label: 'WhatsApp', Icon: MessageCircle },

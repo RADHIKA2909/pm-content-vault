@@ -1,8 +1,20 @@
 import { useState } from 'react'
-import { Linkedin, MessageCircle, FileText, Image as ImageIcon, Link as LinkIcon, NotebookPen, Type } from 'lucide-react'
+import {
+  Briefcase,
+  FileText,
+  HelpCircle,
+  Image as ImageIcon,
+  Link as LinkIcon,
+  Linkedin,
+  MessageCircle,
+  NotebookPen,
+  Type,
+} from 'lucide-react'
 
 const TILE_CONFIG = {
   text: { Icon: Type, bg: 'bg-muted', fg: 'text-text-secondary' },
+  question: { Icon: HelpCircle, bg: 'bg-primary-light', fg: 'text-primary' },
+  job: { Icon: Briefcase, bg: 'bg-secondary/10', fg: 'text-secondary' },
   linkedin_paste: { Icon: Linkedin, bg: 'bg-primary-light', fg: 'text-primary' },
   whatsapp_export: { Icon: MessageCircle, bg: 'bg-success/10', fg: 'text-success' },
   pdf: { Icon: FileText, bg: 'bg-warning/10', fg: 'text-warning' },

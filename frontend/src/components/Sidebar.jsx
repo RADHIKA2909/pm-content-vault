@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Library, MessageSquare, Star, Settings, Sparkles, Plus } from 'lucide-react'
 import Modal from './Modal.jsx'
 import { useToast } from './ToastContext.jsx'
-import Ingest from '../pages/Ingest.jsx'
+import AddContentFlow from './ingest/AddContentFlow.jsx'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', Icon: LayoutDashboard, end: true },
@@ -51,15 +51,15 @@ function Sidebar() {
         ))}
       </nav>
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Content" size="lg">
-        <Ingest
-          onSaved={() => {
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Content" size="xl">
+        <AddContentFlow
+          onSaved={() => showToast('Saved to your vault')}
+          onNavigate={(to) => {
             setAddOpen(false)
-            showToast('Saved to your vault')
             // Land on Library so the new card is visible straight away. The
             // state carries no meaning — it's the fresh history entry that
             // makes Library refetch even when we're already on it.
-            navigate('/library', { state: { savedAt: Date.now() } })
+            navigate(to, to === '/library' ? { state: { savedAt: Date.now() } } : undefined)
           }}
         />
       </Modal>

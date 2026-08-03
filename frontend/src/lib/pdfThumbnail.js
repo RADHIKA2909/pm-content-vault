@@ -28,10 +28,22 @@ const TARGET_WIDTH = 600
  * stop the file itself from being saved.
  */
 export async function renderPdfFirstPage(file) {
+  return (await renderPdfPreview(file))?.blob || null
+}
+
+/**
+ * The same render, plus the page count, in one pass.
+ *
+ * The Add Content flow shows both alongside the file before anything is sent,
+ * and opening the document twice to get them separately would be wasteful on a
+ * large PDF.
+ */
+export async function renderPdfPreview(file) {
   try {
     const pdfjsLib = await loadPdfjs()
     const data = await file.arrayBuffer()
     const pdf = await pdfjsLib.getDocument({ data }).promise
+    const pageCount = pdf.numPages
     const page = await pdf.getPage(1)
 
     const baseViewport = page.getViewport({ scale: 1 })
@@ -49,7 +61,8 @@ export async function renderPdfFirstPage(file) {
 
     await page.render({ canvas, canvasContext, viewport }).promise
 
-    return await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
+    return { blob, pageCount }
   } catch {
     return null
   }

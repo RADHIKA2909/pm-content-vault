@@ -1,6 +1,19 @@
 import supabase from './supabaseClient.js'
 
-export async function insertItem({ sourceType, rawContent, extractedText, fileUrl, thumbnailUrl, linkType, notes }) {
+// `fields` carries anything the caller has already decided — the reviewed
+// title/summary/key points from the guided Add Content flow, or the structured
+// columns a job posting fills in. Passed straight through so a reviewed item is
+// written correct in one insert rather than inserted blank and patched after.
+export async function insertItem({
+  sourceType,
+  rawContent,
+  extractedText,
+  fileUrl,
+  thumbnailUrl,
+  linkType,
+  notes,
+  ...fields
+}) {
   const { data, error } = await supabase
     .from('items')
     .insert({
@@ -12,6 +25,7 @@ export async function insertItem({ sourceType, rawContent, extractedText, fileUr
       thumbnail_url: thumbnailUrl || null,
       link_type: linkType || null,
       notes: notes?.trim() || null,
+      ...fields,
     })
     .select()
     .single()

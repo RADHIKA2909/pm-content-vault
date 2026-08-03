@@ -1,49 +1,111 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { AnimatePresence } from 'framer-motion'
+import { BookOpen, ChevronDown, Plus, SlidersHorizontal, X } from 'lucide-react'
 import { API_URL } from '../lib/api.js'
 import { useToast } from '../components/ToastContext.jsx'
+import { useLocalStorage } from '../lib/useLocalStorage.js'
+import { FAVORITE_TAG, itemCategories } from '../lib/categories.js'
+import {
+  DEFAULT_FILTERS,
+  SORTS,
+  activeFilterCount,
+  filterItems,
+  sortItems,
+  sourceUrl,
+} from '../lib/itemFilters.js'
 import LibraryCard from '../components/LibraryCard.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
-import { SkeletonCard } from '../components/Skeleton.jsx'
-import CategoryFilterBar from '../components/CategoryFilterBar.jsx'
-import { FAVORITE_TAG, itemCategories } from '../lib/categories.js'
+import Modal from '../components/Modal.jsx'
+import AddContentFlow from '../components/ingest/AddContentFlow.jsx'
+import LibraryFlourish from '../components/library/LibraryFlourish.jsx'
+import SearchBar from '../components/library/SearchBar.jsx'
+import CategoryPills from '../components/library/CategoryPills.jsx'
+import FilterPanel from '../components/library/FilterPanel.jsx'
+import ViewToggle from '../components/library/ViewToggle.jsx'
+import EmptyState from '../components/library/EmptyState.jsx'
+import LibrarySkeleton, { FilterSkeleton } from '../components/library/LibrarySkeleton.jsx'
 
+// Column counts are written out in full rather than assembled from `railOpen`.
+// Tailwind scans source text, so a runtime-built class name never reaches the
+// compiled CSS and silently renders as nothing.
+const GRID_CLASSES = {
+  open: 'grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 min-[1440px]:grid-cols-4 min-[1800px]:grid-cols-5',
+  closed:
+    'grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 min-[1500px]:grid-cols-5',
+}
+const LIST_CLASSES = 'flex flex-col gap-2'
+
+// Long enough to notice on arrival, short enough not to linger as decoration.
+const NEW_ITEM_MS = 4000
 
 function Library() {
-  const [items, setItems] = useState([])
-  const [category, setCategory] = useState('')
-  const [search, setSearch] = useState('')
-  const [sort, setSort] = useState('newest')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [pendingDeleteId, setPendingDeleteId] = useState(null)
-  const navigate = useNavigate()
   const location = useLocation()
+  const navigate = useNavigate()
   const { showToast } = useToast()
 
-  const fetchItems = async () => {
-    setLoading(true)
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  // Seeded from navigation state so the Dashboard's search box and category
+  // tiles can land here with a filter already applied.
+  const [search, setSearch] = useState(location.state?.search || '')
+  const [category, setCategory] = useState(location.state?.category || '')
+  const [filters, setFilters] = useState(DEFAULT_FILTERS)
+  const [sort, setSort] = useState('newest')
+
+  const [view, setView] = useLocalStorage('pmv.library.view', 'grid')
+  const [railOpen, setRailOpen] = useLocalStorage('pmv.library.rail', true)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+
+  const [addOpen, setAddOpen] = useState(false)
+  const [pendingDeleteId, setPendingDeleteId] = useState(null)
+  const [newItemId, setNewItemId] = useState(null)
+  const newItemTimer = useRef(null)
+
+  const fetchItems = useCallback(async ({ markNewest = false, silent = false } = {}) => {
+    if (!silent) setLoading(true)
     setError(null)
 
     try {
       const res = await fetch(`${API_URL}/api/items`)
       if (!res.ok) throw new Error('Failed to load items')
-      setItems(await res.json())
+      const data = await res.json()
+      setItems(data)
+
+      // The API returns newest-first, so the just-saved row is data[0].
+      if (markNewest && data.length) {
+        setNewItemId(data[0].id)
+        clearTimeout(newItemTimer.current)
+        newItemTimer.current = setTimeout(() => setNewItemId(null), NEW_ITEM_MS)
+      }
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   // Keyed on location.key so arriving here refetches every time — including
   // when a save navigates to Library from Library, which doesn't remount the
-  // page and so would otherwise show a stale list until a manual refresh.
+  // page and so would otherwise show a stale list.
   useEffect(() => {
-    fetchItems()
+    fetchItems({ markNewest: Boolean(location.state?.savedAt) })
+    setSearch(location.state?.search || '')
+    setCategory(location.state?.category || '')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key])
+
+  useEffect(() => () => clearTimeout(newItemTimer.current), [])
+
+  // Escape closes the mobile filter drawer.
+  useEffect(() => {
+    if (!drawerOpen) return
+    const onKeyDown = (e) => e.key === 'Escape' && setDrawerOpen(false)
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [drawerOpen])
 
   const categoryCounts = useMemo(() => {
     const counts = {}
@@ -53,28 +115,19 @@ function Library() {
     return counts
   }, [items])
 
-  const visibleItems = useMemo(() => {
-    let result = items
+  const visibleItems = useMemo(
+    () => sortItems(filterItems(items, { search, category, filters }), sort),
+    [items, search, category, filters, sort],
+  )
 
-    if (category) result = result.filter((item) => itemCategories(item).includes(category))
+  const activeCount = activeFilterCount(filters)
+  const isNarrowed = Boolean(search.trim() || category || activeCount)
 
-    if (search.trim()) {
-      const q = search.trim().toLowerCase()
-      result = result.filter(
-        (item) =>
-          item.title?.toLowerCase().includes(q) ||
-          item.summary?.toLowerCase().includes(q) ||
-          itemCategories(item).some((c) => c.toLowerCase().includes(q)) ||
-          item.raw_content?.toLowerCase().includes(q),
-      )
-    }
-
-    return [...result].sort((a, b) =>
-      sort === 'newest'
-        ? new Date(b.created_at) - new Date(a.created_at)
-        : new Date(a.created_at) - new Date(b.created_at),
-    )
-  }, [items, category, search, sort])
+  const resetAll = () => {
+    setSearch('')
+    setCategory('')
+    setFilters(DEFAULT_FILTERS)
+  }
 
   const handleToggleFavorite = async (id, isFavorite) => {
     await fetch(`${API_URL}/api/items/${id}/tags`, {
@@ -83,7 +136,8 @@ function Library() {
       body: JSON.stringify({ tag: FAVORITE_TAG }),
     })
     showToast(isFavorite ? 'Removed from favorites' : 'Added to favorites')
-    fetchItems()
+    // Silent: a full reload would blank the grid mid-interaction.
+    fetchItems({ silent: true })
   }
 
   const handleDelete = async () => {
@@ -93,75 +147,266 @@ function Library() {
     showToast('Item deleted')
   }
 
+  const handleCopyLink = async (item) => {
+    const url = sourceUrl(item)
+    if (!url) return
+    try {
+      await navigator.clipboard.writeText(url)
+      showToast('Source link copied')
+    } catch {
+      showToast('Could not copy link')
+    }
+  }
+
+  // "Ask about this" opens the item, which already carries its own chat panel —
+  // better than dropping the question into the global chat with no context.
+  const handleAsk = (id) => navigate(`/library/${id}`)
+
+  const emptyVariant = () => {
+    if (items.length === 0) return 'no-content'
+    if (filters.favoritesOnly && !search.trim() && !category && activeCount === 1) return 'no-favorites'
+    if (category && !search.trim() && activeCount === 0) return 'empty-category'
+    return 'no-results'
+  }
+
+  const emptyAction = () => {
+    if (items.length === 0) return () => setAddOpen(true)
+    return resetAll
+  }
+
+  // `showTitle` is off inside the drawer, which supplies its own header — two
+  // "Filters" headings stacked on top of each other otherwise.
+  const filterPanel = (showTitle) => (
+    <FilterPanel
+      filters={filters}
+      onChange={setFilters}
+      counts={categoryCounts}
+      selectedCategory={category}
+      onSelectCategory={setCategory}
+      showTitle={showTitle}
+    />
+  )
+
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-[30px] font-semibold tracking-tight text-text-primary">Library</h1>
-          <p className="text-body text-text-secondary">{items.length} saved</p>
-        </div>
+    <div className="relative">
+      {/* `isolate` is scoped to the header, not the page.
+          The flourish sits at -z-10 and needs a local stacking context or it
+          disappears behind the app background — but putting that context on the
+          page root also traps the filter drawer and the Add Content modal
+          inside it, letting the mobile nav's z-40 paint over their z-50. */}
+      <div className="absolute inset-x-0 top-0 isolate">
+        <LibraryFlourish />
       </div>
 
-      <div className="mb-3 flex gap-2">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search your vault — content, summaries, categories..."
-            className="w-full rounded-xl border border-border-subtle bg-surface py-2.5 pl-9 pr-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
-        <select
-          value={sort}
-          onChange={(e) => setSort(e.target.value)}
-          className="rounded-xl border border-border-subtle bg-surface px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          <option value="newest">Newest</option>
-          <option value="oldest">Oldest</option>
-        </select>
-      </div>
-
-      <div className="mb-5">
-        <CategoryFilterBar
-          counts={categoryCounts}
-          total={items.length}
-          selected={category}
-          onSelect={setCategory}
-          query={search}
-        />
-      </div>
-
-      {error && <p className="mb-4 rounded-xl bg-warning/10 px-3 py-2 text-sm text-warning">Error: {error}</p>}
-
-      {loading && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-        </div>
-      )}
-
-      {!loading && visibleItems.length === 0 && !error && (
-        <div className="py-16 text-center text-text-secondary">
-          <p className="text-sm">
-            {items.length === 0 ? 'Start building your PM knowledge vault.' : 'No items match your search.'}
+      <header className="relative mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <h1 className="flex items-center gap-2.5 text-[24px] font-semibold leading-tight tracking-tight text-text-primary sm:text-[30px]">
+            Library
+            <span
+              aria-hidden="true"
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-light text-primary"
+            >
+              <BookOpen className="h-[18px] w-[18px]" strokeWidth={1.75} />
+            </span>
+          </h1>
+          <p className="mt-1 text-body text-text-secondary">
+            All your saved content in one place. Search, filter and revisit what matters.
           </p>
         </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            onClick={() => (window.innerWidth >= 1280 ? setRailOpen((v) => !v) : setDrawerOpen(true))}
+            aria-label="Filters"
+            className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium shadow-card ring-1 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+              activeCount > 0
+                ? 'bg-primary-light text-primary ring-primary/20'
+                : 'bg-surface text-text-primary ring-border-subtle hover:bg-muted'
+            }`}
+          >
+            <SlidersHorizontal className="h-4 w-4" strokeWidth={1.75} />
+            Filter
+            {activeCount > 0 && (
+              <span className="rounded-full bg-primary px-1.5 text-[11px] font-semibold text-white">
+                {activeCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setAddOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white shadow-card transition-colors duration-200 hover:bg-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2} /> Add Content
+          </button>
+        </div>
+      </header>
+
+      <div className="flex items-start gap-4">
+        <div className="min-w-0 flex-1">
+          <SearchBar value={search} onChange={setSearch} />
+
+          <div className="mt-3.5">
+            <CategoryPills
+              counts={categoryCounts}
+              total={items.length}
+              selected={category}
+              onSelect={setCategory}
+            />
+          </div>
+
+          <div className="mb-3 mt-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-caption text-text-secondary" aria-live="polite">
+              {loading ? (
+                'Loading…'
+              ) : isNarrowed ? (
+                <>
+                  <span className="font-semibold text-text-primary">{visibleItems.length}</span> of {items.length}{' '}
+                  {items.length === 1 ? 'item' : 'items'}
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold text-text-primary">{items.length}</span>{' '}
+                  {items.length === 1 ? 'item' : 'items'}
+                </>
+              )}
+              {isNarrowed && (
+                <button
+                  onClick={resetAll}
+                  className="ml-2 rounded-md px-1 font-medium text-primary transition-colors duration-150 hover:bg-primary-light focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  Clear
+                </button>
+              )}
+            </p>
+
+            {/* One toolbar shell rather than two floating chips. A future
+                density control is another segment after a divider — no
+                placeholder is rendered for it, since a visible control that
+                does nothing is worse than no control. */}
+            <div className="inline-flex items-center rounded-xl bg-surface p-0.5 shadow-raised ring-1 ring-border-subtle">
+              <label className="relative hidden items-center sm:flex">
+                <span className="sr-only">Sort by</span>
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                  className="cursor-pointer appearance-none rounded-lg bg-transparent py-1.5 pl-2.5 pr-7 text-caption font-medium text-text-primary transition-colors duration-200 hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  {SORTS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className="pointer-events-none absolute right-2 h-3.5 w-3.5 text-text-secondary"
+                  strokeWidth={2}
+                />
+              </label>
+
+              <span aria-hidden="true" className="mx-0.5 hidden h-5 w-px bg-border-subtle sm:block" />
+
+              <ViewToggle view={view} onChange={setView} />
+            </div>
+          </div>
+
+          {error && (
+            <p className="mb-4 rounded-xl bg-warning/10 px-3 py-2 text-sm text-warning">Error: {error}</p>
+          )}
+
+          {loading ? (
+            <LibrarySkeleton
+              view={view}
+              count={view === 'list' ? 6 : 8}
+              className={view === 'list' ? LIST_CLASSES : GRID_CLASSES[railOpen ? 'open' : 'closed']}
+            />
+          ) : visibleItems.length === 0 && !error ? (
+            <EmptyState
+              variant={emptyVariant()}
+              detail={emptyVariant() === 'empty-category' ? category : null}
+              onAction={emptyAction()}
+            />
+          ) : (
+            // Keyed on view so switching remounts the list and replays the
+            // entrance — that's the crossfade between grid and list.
+            <ul
+              key={view}
+              className={view === 'list' ? LIST_CLASSES : GRID_CLASSES[railOpen ? 'open' : 'closed']}
+            >
+              {/* popLayout takes exiting cards out of flow while they fade, so
+                  the survivors slide into the freed slots instead of jumping
+                  the instant a filter drops a card. */}
+              <AnimatePresence mode="popLayout" initial={false}>
+                {visibleItems.map((item, i) => (
+                  <LibraryCard
+                    key={item.id}
+                    item={item}
+                    view={view}
+                    isFavorite={item.tags?.some((t) => t.tag === FAVORITE_TAG)}
+                    isNew={item.id === newItemId}
+                    // Stagger only the first screenful; past that it's just a
+                    // delay before the user sees their content.
+                    delay={Math.min(i, 11) * 25}
+                    onOpen={(id) => navigate(`/library/${id}`)}
+                    onToggleFavorite={handleToggleFavorite}
+                    onDelete={(id) => setPendingDeleteId(id)}
+                    onAsk={handleAsk}
+                    onCopyLink={sourceUrl(item) ? handleCopyLink : undefined}
+                  />
+                ))}
+              </AnimatePresence>
+            </ul>
+          )}
+        </div>
+
+        {railOpen && (
+          <aside aria-label="Filters" className="hidden w-[220px] shrink-0 animate-slideInRight xl:block">
+            {loading ? <FilterSkeleton /> : filterPanel(true)}
+          </aside>
+        )}
+      </div>
+
+      {/* Below xl the rail becomes a drawer rather than disappearing.
+          z-50 matches Modal — at the mobile nav's z-40 the nav drew on top of
+          it, leaving a live navigation bar over a modal surface. */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-50 xl:hidden">
+          <div
+            className="absolute inset-0 bg-text-primary/20 backdrop-blur-[2px]"
+            onClick={() => setDrawerOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Filters"
+            className="absolute right-0 top-0 flex h-full w-[300px] max-w-[86vw] animate-slideInRight flex-col bg-bg-app shadow-card-hover"
+          >
+            <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
+              <h2 className="text-[15px] font-semibold text-text-primary">Filters</h2>
+              <button
+                onClick={() => setDrawerOpen(false)}
+                aria-label="Close filters"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary transition-colors duration-150 hover:bg-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <X className="h-4 w-4" strokeWidth={2} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 pb-24">{filterPanel(false)}</div>
+          </div>
+        </div>
       )}
 
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-        {visibleItems.map((item) => (
-          <LibraryCard
-            key={item.id}
-            item={item}
-            isFavorite={item.tags?.some((t) => t.tag === FAVORITE_TAG)}
-            onOpen={(id) => navigate(`/library/${id}`)}
-            onToggleFavorite={handleToggleFavorite}
-            onDelete={(id) => setPendingDeleteId(id)}
-          />
-        ))}
-      </ul>
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Content" size="xl">
+        <AddContentFlow
+          // Already on Library — refetch in place and flag the new item rather
+          // than navigating to the page we're standing on.
+          onSaved={() => fetchItems({ markNewest: true, silent: true })}
+          onNavigate={(to) => {
+            setAddOpen(false)
+            if (to !== '/library') navigate(to)
+          }}
+        />
+      </Modal>
 
       <ConfirmModal
         open={pendingDeleteId !== null}

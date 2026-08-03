@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Star, ExternalLink, ChevronDown, Trash2, Copy, Pencil, Plus, X } from 'lucide-react'
+import { ArrowLeft, Star, ExternalLink, ChevronDown, Trash2, Copy, Pencil, Plus, WandSparkles, X } from 'lucide-react'
 import { API_URL } from '../lib/api.js'
 import { useToast } from '../components/ToastContext.jsx'
 import Card from '../components/Card.jsx'
@@ -335,6 +335,60 @@ function ItemDetail() {
             emptyLabel="No AI summary — add your own."
             onSave={(next) => handleFieldSave({ summary: next })}
           />
+
+          {/* Written by the guided Add Content flow. Only rendered when the
+              item actually has them — everything saved before that flow
+              existed has none, and an empty "Key points" heading is worse
+              than no heading. */}
+          {item.key_points?.length > 0 && (
+            <Card>
+              <h2 className="mb-2.5 flex items-center gap-2 text-caption font-semibold uppercase tracking-wide text-text-secondary">
+                <WandSparkles className="h-3.5 w-3.5 text-primary" strokeWidth={1.75} />
+                Key points
+              </h2>
+              <ul className="space-y-2">
+                {item.key_points.map((point, i) => (
+                  <li key={i} className="flex gap-2.5">
+                    <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary/50" />
+                    <span className="text-body leading-relaxed text-text-primary">{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          {item.source_type === 'job' && (item.company || item.role || item.deadline || item.salary) && (
+            <Card>
+              <h2 className="mb-2.5 text-caption font-semibold uppercase tracking-wide text-text-secondary">
+                Role details
+              </h2>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                {[
+                  ['Role', item.role],
+                  ['Company', item.company],
+                  ['Salary', item.salary],
+                  ['Deadline', item.deadline && new Date(item.deadline).toLocaleDateString()],
+                ]
+                  .filter(([, value]) => value)
+                  .map(([label, value]) => (
+                    <div key={label}>
+                      <dt className="text-caption text-text-secondary">{label}</dt>
+                      <dd className="text-body text-text-primary">{value}</dd>
+                    </div>
+                  ))}
+              </dl>
+              {item.apply_url && (
+                <a
+                  href={item.apply_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-primary-light px-3 py-1.5 text-caption font-medium text-primary transition-colors hover:bg-primary hover:text-white"
+                >
+                  Open application <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              )}
+            </Card>
+          )}
 
           <EditableSection
             label="My Notes"

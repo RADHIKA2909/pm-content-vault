@@ -53,6 +53,13 @@ function requireApiKey() {
   return key
 }
 
+// Only the first character — the rest keeps whatever casing it had, so
+// "KPI trees" and "A/B testing" survive intact.
+function capitalizeFirst(value) {
+  const clean = (value || '').trim()
+  return clean ? clean[0].toUpperCase() + clean.slice(1) : clean
+}
+
 export async function categorizeAndSummarize(text) {
 
   const prompt = `Classify this saved PM (Product Manager) interview-prep content.
@@ -61,10 +68,13 @@ Pick exactly one category from: ${CATEGORIES.join(', ')}.
 If the category is "Interview Questions", also pick one subcategory from: ${INTERVIEW_SUBCATEGORIES.join(', ')}. Otherwise return an empty string for subcategory.
 Write a 1-2 line summary of the content.
 Write a very short title, 1-2 words (2 only if needed for clarity, e.g. "RCA Framework"), plain text, no punctuation — a punchy topic label shown as a bold card heading, not a description.
-Write a short subtitle: a plain, lowercase-style phrase of AT MOST 5 SHORT words (prefer common short words over long ones), no trailing punctuation, that fits on one line without being cut off (e.g. "kpi trees and guesstimates" or "flowcharts for user navigation"). It must be short enough to read in full on a narrow card — do not write a sentence that needs truncating. Fewer words is better than more.
+Write a short subtitle: a plain phrase of AT MOST 5 SHORT words (prefer common short words over long ones), starting with a capital letter, with no trailing punctuation, that fits on one line without being cut off (e.g. "KPI trees and guesstimates" or "Flowcharts for user navigation"). It must be short enough to read in full on a narrow card — do not write a sentence that needs truncating. Fewer words is better than more.
+Write keyPoints: 3 to 5 bullet points capturing what this content actually says, each a complete sentence of at most 20 words. These are what the reader would want to recall without re-reading the original, so prefer specifics (a framework's steps, a metric, a concrete piece of advice) over generalities. If the content is too short to yield 3 distinct points, return fewer rather than padding.
+
+Write categoryReason: one sentence, at most 25 words, saying why this content belongs in that category. Refer to what the content is actually about — "this walks through a prioritisation method rather than asking a question" — not to the category's own definition.
 
 Respond with ONLY raw JSON, no markdown fences, in exactly this shape:
-{"category": "...", "subcategory": "...", "summary": "...", "title": "...", "subtitle": "..."}
+{"category": "...", "subcategory": "...", "summary": "...", "title": "...", "subtitle": "...", "keyPoints": ["...", "..."], "categoryReason": "..."}
 
 Content:
 """
@@ -81,7 +91,19 @@ ${text}
     subcategory: parsed.subcategory || null,
     summary: parsed.summary || null,
     title: parsed.title || null,
-    subtitle: parsed.subtitle || null,
+    // Enforced here rather than trusted to the prompt — the model drifts back
+    // to lowercase, and this is the value the review step shows for editing.
+    subtitle: capitalizeFirst(parsed.subtitle) || null,
+    // Defended rather than trusted: the model occasionally returns a single
+    // string, or pads to the requested count with empties.
+    keyPoints: Array.isArray(parsed.keyPoints)
+      ? parsed.keyPoints.map((p) => String(p).trim()).filter(Boolean).slice(0, 5)
+      : [],
+    // The model's own account of why it picked that category. Post-hoc
+    // rationalisation rather than a verified fact, so the UI attributes it to
+    // the AI rather than stating it as true. Not stored — it explains a
+    // decision at the moment it's made and is never read again afterwards.
+    categoryReason: (parsed.categoryReason || '').trim() || null,
   }
 }
 

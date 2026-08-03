@@ -52,20 +52,7 @@ export async function enrichItem(item, { skipSummary = false, category: category
 
   try {
     const embedding = await embedText(textToProcess)
-
-    if (embedding) {
-      // v0 embeds one chunk per item, so re-running enrichment (e.g. a
-      // backfill after a transient failure) must replace, not duplicate, it.
-      await supabase.from('embeddings').delete().eq('item_id', item.id)
-      await supabase.from('embeddings').insert({
-        item_id: item.id,
-        user_id: item.user_id,
-        chunk_text: textToProcess,
-        embedding,
-      })
-
-      await checkForDuplicates(item, embedding)
-    }
+    if (embedding) await persistEmbedding(item, textToProcess, embedding)
   } catch (err) {
     console.error(`Embedding/dedup failed for item ${item.id}:`, err.message)
   }
@@ -73,23 +60,56 @@ export async function enrichItem(item, { skipSummary = false, category: category
   return warning ? { ...categorization, warning } : categorization
 }
 
-async function checkForDuplicates(item, embedding) {
+/**
+ * Stores an item's embedding and re-runs its duplicate check.
+ *
+ * Split out of enrichItem so the guided Add Content flow can reuse it: that
+ * flow embeds during the pre-save analyze step, then commits with the
+ * embedding already in hand, and must not pay for a second Gemini call just to
+ * arrive back here.
+ */
+export async function persistEmbedding(item, chunkText, embedding) {
+  // v0 embeds one chunk per item, so re-running (e.g. a backfill after a
+  // transient failure) must replace, not duplicate, it.
+  await supabase.from('embeddings').delete().eq('item_id', item.id)
+  await supabase.from('embeddings').insert({
+    item_id: item.id,
+    user_id: item.user_id,
+    chunk_text: chunkText,
+    embedding,
+  })
+
+  await checkForDuplicates(item, embedding)
+}
+
+/**
+ * Finds the nearest saved item to an embedding, for warning about duplicates
+ * before anything is written.
+ *
+ * `excludeItemId` is null during the pre-save analyze step because the draft
+ * has no row yet — there is no self to exclude.
+ */
+export async function findDuplicate(embedding, userId, excludeItemId = null) {
   const { data, error } = await supabase.rpc('match_embeddings', {
     query_embedding: embedding,
-    match_user_id: item.user_id,
+    match_user_id: userId,
     match_count: 3,
   })
 
   if (error) {
-    console.error(`Dedup lookup failed for item ${item.id}:`, error.message)
-    return
+    console.error('Dedup lookup failed:', error.message)
+    return null
   }
 
+  return data?.find((m) => m.item_id !== excludeItemId && m.similarity >= DUPLICATE_THRESHOLD) || null
+}
+
+async function checkForDuplicates(item, embedding) {
   // Clear any prior verdict first — enrichment re-runs (backfills, edits)
   // would otherwise stack redundant rows and inflate the duplicate count.
   await supabase.from('duplicates').delete().eq('item_id', item.id)
 
-  const match = data?.find((m) => m.item_id !== item.id && m.similarity >= DUPLICATE_THRESHOLD)
+  const match = await findDuplicate(embedding, item.user_id, item.id)
   if (!match) return
 
   await supabase.from('duplicates').insert({

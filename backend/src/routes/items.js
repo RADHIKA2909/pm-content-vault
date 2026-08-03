@@ -75,6 +75,42 @@ async function setCategories(itemId, categories) {
   return list
 }
 
+/**
+ * Attaches tags to an item, skipping any it already carries.
+ *
+ * Uniqueness is enforced by `tags_item_tag_unique on tags (item_id, lower(tag))`
+ * (migration 010). That's an expression index, which PostgREST's upsert can't
+ * target — `ON CONFLICT` needs a plain column list — so the check is done here
+ * instead, case-insensitively to match the index.
+ *
+ * The read-then-insert is not atomic, so a genuine race can still hit the
+ * index. A unique violation means the tag is now present, which is exactly what
+ * the caller asked for, so it's swallowed rather than surfaced as a failure.
+ */
+async function addTags(itemId, tags) {
+  const wanted = [...new Set(tags.map((t) => t.trim()).filter(Boolean))]
+  if (!wanted.length) return { error: null }
+
+  const { data: existing, error: readError } = await supabase
+    .from('tags')
+    .select('tag')
+    .eq('item_id', itemId)
+    .eq('user_id', process.env.DEFAULT_USER_ID)
+
+  if (readError) return { error: readError }
+
+  const have = new Set((existing || []).map((row) => row.tag.toLowerCase()))
+  const missing = wanted.filter((tag) => !have.has(tag.toLowerCase()))
+  if (!missing.length) return { error: null }
+
+  const { error } = await supabase
+    .from('tags')
+    .insert(missing.map((tag) => ({ item_id: itemId, user_id: process.env.DEFAULT_USER_ID, tag })))
+
+  if (error && error.code === '23505') return { error: null }
+  return { error }
+}
+
 // Title and subtitle live in one column as "Title::subtitle" (see
 // services/enrichItem.js) — packed on write, split on read by the frontend.
 function packTitle(title, subtitle) {
@@ -114,7 +150,7 @@ router.get('/', async (req, res) => {
   let query = supabase
     .from('items')
     .select(
-      'id, source_type, raw_content, file_url, thumbnail_url, link_type, notes, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag), item_categories(category)',
+      'id, source_type, raw_content, file_url, thumbnail_url, link_type, notes, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag, created_at), item_categories(category, created_at)',
     )
     .eq('user_id', process.env.DEFAULT_USER_ID)
     .order('created_at', { ascending: false })
@@ -173,7 +209,7 @@ router.get('/:id', async (req, res) => {
   const { data: item, error } = await supabase
     .from('items')
     .select(
-      'id, source_type, raw_content, extracted_text, formatted_content, file_url, thumbnail_url, link_type, notes, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag), item_categories(category)',
+      'id, source_type, raw_content, extracted_text, formatted_content, file_url, thumbnail_url, link_type, notes, title, summary, key_points, company, role, apply_url, salary, deadline, category, subcategory, created_at, last_engaged_at, tags(tag, created_at), item_categories(category, created_at)',
     )
     .eq('id', id)
     .eq('user_id', userId)
