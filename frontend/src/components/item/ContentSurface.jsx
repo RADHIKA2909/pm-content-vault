@@ -10,6 +10,7 @@ import {
   unpaint,
 } from '../../lib/annotations.js'
 import { structuredTextToHtml } from '../../lib/contentHtml.js'
+import { linkTarget } from '../../lib/preferences.js'
 import SelectionToolbar from './SelectionToolbar.jsx'
 import HighlightNote from './HighlightNote.jsx'
 import LinkPreview from './LinkPreview.jsx'
@@ -102,6 +103,27 @@ function ContentSurface({
     },
     [positionFor],
   )
+
+  // ── Links inside the content ───────────────────────────────────────────
+  //
+  // These are written by structuredTextToHtml (and by the note sanitizer) as
+  // bare `<a href>`, so they arrive with no target and no rel. Two problems:
+  // the "open links in" preference didn't reach them even though they're most
+  // of the links in the vault, and an external URL opened in a new tab without
+  // `rel` hands the destination a handle on this page.
+  //
+  // Fixed here rather than in the HTML generator on purpose — that string is
+  // also what seeds the rich-text editor, and baking a preference into stored
+  // content would persist one user's setting into the saved item.
+  useLayoutEffect(() => {
+    const container = contentRef.current
+    if (!container) return
+
+    for (const anchor of container.querySelectorAll('a[href^="http"]')) {
+      anchor.target = linkTarget()
+      anchor.rel = 'noopener noreferrer'
+    }
+  }, [html])
 
   // ── Draw the annotation layer ──────────────────────────────────────────
   useLayoutEffect(() => {

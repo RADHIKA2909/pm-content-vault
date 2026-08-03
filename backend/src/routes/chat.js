@@ -178,7 +178,7 @@ function connectedIdeas(items) {
 // finished. A progress indicator driven by a timer is one that lies whenever
 // the model is slow.
 router.post('/', async (req, res) => {
-  const { query, history, sessionId } = req.body
+  const { query, history, sessionId, style } = req.body
 
   if (!query || !query.trim()) {
     return res.status(400).json({ error: 'query is required' })
@@ -233,6 +233,10 @@ router.post('/', async (req, res) => {
       vaultIndex,
       history: recentHistory,
       covered,
+      // The user's Settings choice. Unknown values fall through to the
+      // generator's default rather than being rejected — a stale preference
+      // from an older build shouldn't fail the question.
+      style,
     })
     send('phase', { phase: 'composing', status: 'done' })
 

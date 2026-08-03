@@ -7,6 +7,7 @@ import { CategoryChip } from '../Chip.jsx'
 import { parseTitle } from '../../lib/parseTitle.js'
 import { sourceUrl } from '../../lib/itemFilters.js'
 import { savedAgoLong } from '../../lib/relativeTime.js'
+import { linkTarget } from '../../lib/preferences.js'
 
 /**
  * One cited item, expandable to the passage the answer actually used.
@@ -93,7 +94,7 @@ function SourceCard({ index, item, chunkText, similarity, delay = 0 }) {
                 {original && (
                   <a
                     href={original}
-                    target="_blank"
+                    target={linkTarget()}
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[12px] font-medium text-text-secondary transition-colors duration-150 hover:bg-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >

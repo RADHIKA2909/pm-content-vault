@@ -304,12 +304,28 @@ function recoverSections(raw) {
  * answer to "what did I save about RCA?" has nothing to compare, and forcing
  * two cards there produces filler with a confident heading over it.
  */
+// How long an answer should run. Set from Settings and passed through by the
+// chat route; `balanced` is the behaviour that existed before the preference
+// did, so an unset or unrecognised value changes nothing.
+const ANSWER_STYLE = {
+  // These override the section rules below them, and say so explicitly. A
+  // milder "keep it short" left concise answers within 10% of balanced ones,
+  // because the model still reached for cards and a takeaway — the length rule
+  // only governed the body, which is the smaller half of a long answer.
+  concise:
+    'Answer in as few words as genuinely answer it: at most two or three sentences of body, no bullet list, and return an EMPTY cards array and an EMPTY takeaway even if the answer could support them. The overview plus a short body is the entire answer.',
+  detailed:
+    'Take the space this deserves. Work through the reasoning, use a bullet list wherever there are distinct points, and include the comparison cards and the key takeaway whenever the answer genuinely has them.',
+}
+
 export async function generateVaultAnswer(
   query,
   chunks,
-  { vaultIndex = [], history = [], covered = false } = {},
+  { vaultIndex = [], history = [], covered = false, style = 'balanced' } = {},
 ) {
-  const prompt = `${ASSISTANT_ROLE}
+  const lengthRule = ANSWER_STYLE[style] ? `\n\nLENGTH:\n${ANSWER_STYLE[style]}` : ''
+
+  const prompt = `${ASSISTANT_ROLE}${lengthRule}
 
 Return your answer as SECTIONS, described below. Same voice and same citation
 discipline as always — simple language, cite excerpts inline as [1], [2].

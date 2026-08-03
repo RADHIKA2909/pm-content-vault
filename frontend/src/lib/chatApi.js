@@ -22,11 +22,11 @@ export const PHASES = [
  * body. Reading the response stream by hand gives the same server-sent-events
  * semantics over POST — the same approach lib/composeApi.js takes for ingest.
  */
-export async function askVault({ query, history, sessionId }, { onPhase, signal } = {}) {
+export async function askVault({ query, history, sessionId, style }, { onPhase, signal } = {}) {
   const res = await fetch(`${API_URL}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, history, sessionId }),
+    body: JSON.stringify({ query, history, sessionId, style }),
     signal,
   })
 

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { API_URL } from '../lib/api.js'
 import { askVault, sectionsFromTurn, PHASES } from '../lib/chatApi.js'
+import { readPreference } from '../lib/preferences.js'
 import { useSpeechInput } from '../lib/useSpeechInput.js'
 import ConfirmModal from '../components/ConfirmModal.jsx'
 import Modal from '../components/Modal.jsx'
@@ -132,6 +133,20 @@ function Chat() {
     if (location.state?.sessionId) openSession(location.state.sessionId)
   }, [location.state, openSession])
 
+  // Arrived from a prompt elsewhere in the app (the Favorites study panel).
+  // Asked on arrival rather than dropped into the input: the user already
+  // chose the question by clicking it, so making them press send again is a
+  // step that decides nothing.
+  const askedPromptRef = useRef(null)
+
+  useEffect(() => {
+    const prompt = location.state?.prompt
+    if (!prompt || askedPromptRef.current === prompt) return
+    askedPromptRef.current = prompt
+    ask(prompt)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state])
+
   const newChat = () => {
     setSessionId(null)
     setMessages([])
@@ -167,7 +182,9 @@ function Chat() {
 
     try {
       const result = await askVault(
-        { query: text, history, sessionId },
+        // Read per question rather than held in state: changing it in
+        // Settings then coming back here should apply immediately.
+        { query: text, history, sessionId, style: readPreference('answerStyle') },
         {
           onPhase: (payload) => {
             if (payload.status !== 'done') return

@@ -42,6 +42,7 @@ import { parseTitle } from '../lib/parseTitle.js'
 import { sourceUrl } from '../lib/itemFilters.js'
 import { savedAgoLong } from '../lib/relativeTime.js'
 import { structuredTextToHtml } from '../lib/contentHtml.js'
+import { linkTarget } from '../lib/preferences.js'
 
 const SOURCE_TYPE_LABEL = {
   text: 'Pasted text',
@@ -590,8 +591,8 @@ function ItemDetail() {
                     {item.apply_url && (
                       <a
                         href={item.apply_url}
-                        target="_blank"
-                        rel="noreferrer"
+                        target={linkTarget()}
+                        rel="noopener noreferrer"
                         className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-primary-light px-3 py-1.5 text-caption font-medium text-primary transition-colors hover:bg-primary hover:text-white"
                       >
                         Open application <ExternalLink className="h-3.5 w-3.5" />
@@ -658,7 +659,7 @@ function ItemDetail() {
               {item.source_type === 'link' && (
                 <a
                   href={item.raw_content}
-                  target="_blank"
+                  target={linkTarget()}
                   rel="noopener noreferrer"
                   className="flex items-center gap-1.5 break-all text-caption text-text-secondary hover:text-primary"
                 >
@@ -696,7 +697,7 @@ function ItemDetail() {
                 (item.file_url ? (
                   <a
                     href={item.file_url}
-                    target="_blank"
+                    target={linkTarget()}
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 text-sm text-primary hover:underline"
                   >
@@ -748,7 +749,7 @@ function ItemDetail() {
                     <dd className="min-w-0 text-right">
                       <a
                         href={link}
-                        target="_blank"
+                        target={linkTarget()}
                         rel="noopener noreferrer"
                         className="inline-flex max-w-full items-center gap-1 truncate text-primary hover:underline"
                       >
