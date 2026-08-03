@@ -1,4 +1,4 @@
-import { API_URL } from './api.js'
+import { apiFetch } from './apiFetch.js'
 import { itemCategories } from './categories.js'
 import { parseTitle } from './parseTitle.js'
 import { sourceUrl } from './itemFilters.js'
@@ -18,7 +18,7 @@ import { sourceUrl } from './itemFilters.js'
  */
 async function loadDetail(item) {
   try {
-    const res = await fetch(`${API_URL}/api/items/${item.id}`)
+    const res = await apiFetch(`/api/items/${item.id}`)
     return res.ok ? { ...item, ...(await res.json()) } : item
   } catch {
     return item

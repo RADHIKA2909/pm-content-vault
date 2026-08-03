@@ -1,4 +1,4 @@
-import { API_URL } from './api.js'
+import { apiFetch } from './apiFetch.js'
 
 // The phases the answer endpoint streams, in order. Each one is emitted when
 // that step actually finished on the server — retrieval, index load, coverage
@@ -23,7 +23,7 @@ export const PHASES = [
  * semantics over POST — the same approach lib/composeApi.js takes for ingest.
  */
 export async function askVault({ query, history, sessionId, style }, { onPhase, signal } = {}) {
-  const res = await fetch(`${API_URL}/api/chat`, {
+  const res = await apiFetch(`/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, history, sessionId, style }),

@@ -13,7 +13,7 @@ import {
   Waypoints,
   X,
 } from 'lucide-react'
-import { API_URL } from '../lib/api.js'
+import { apiFetch } from '../lib/apiFetch.js'
 import { askVault, sectionsFromTurn, PHASES } from '../lib/chatApi.js'
 import { readPreference } from '../lib/preferences.js'
 import { useSpeechInput } from '../lib/useSpeechInput.js'
@@ -81,7 +81,7 @@ function Chat() {
 
   const loadSessions = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/api/chat/sessions`)
+      const res = await apiFetch(`/api/chat/sessions`)
       setSessions(res.ok ? await res.json() : [])
     } catch {
       setSessions([])
@@ -92,7 +92,7 @@ function Chat() {
 
   useEffect(() => {
     loadSessions()
-    fetch(`${API_URL}/api/items/stats`)
+    apiFetch(`/api/items/stats`)
       .then((res) => (res.ok ? res.json() : null))
       .then(setStats)
       .catch(() => setStats(null))
@@ -105,8 +105,8 @@ function Chat() {
 
     try {
       const [turnsRes, itemsRes] = await Promise.all([
-        fetch(`${API_URL}/api/chat/sessions/${id}`),
-        fetch(`${API_URL}/api/items`),
+        apiFetch(`/api/chat/sessions/${id}`),
+        apiFetch(`/api/items`),
       ])
 
       const turns = turnsRes.ok ? await turnsRes.json() : []
@@ -157,7 +157,7 @@ function Chat() {
   }
 
   const deleteSession = async (id) => {
-    await fetch(`${API_URL}/api/chat/sessions/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/chat/sessions/${id}`, { method: 'DELETE' })
     setSessions((prev) => prev.filter((s) => s.id !== id))
     if (id === sessionId) newChat()
   }

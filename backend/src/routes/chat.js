@@ -11,7 +11,7 @@ router.get('/history', async (req, res) => {
   const { data, error } = await supabase
     .from('chat_queries')
     .select('id, session_id, query_text, answer_text, cited_item_ids, created_at')
-    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .eq('user_id', req.userId)
     .order('created_at', { ascending: false })
     .limit(5)
 
@@ -24,7 +24,7 @@ router.get('/sessions', async (req, res) => {
   const { data, error } = await supabase
     .from('chat_sessions')
     .select('id, title, created_at, updated_at')
-    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .eq('user_id', req.userId)
     .order('updated_at', { ascending: false })
     .limit(100)
 
@@ -40,7 +40,7 @@ router.get('/sessions/:id', async (req, res) => {
   const { data, error } = await supabase
     .from('chat_queries')
     .select('id, query_text, answer_text, answer_sections, cited_item_ids, created_at')
-    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .eq('user_id', req.userId)
     .eq('session_id', req.params.id)
     .order('created_at', { ascending: true })
 
@@ -52,7 +52,7 @@ router.delete('/sessions/:id', async (req, res) => {
   const { error } = await supabase
     .from('chat_sessions')
     .delete()
-    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .eq('user_id', req.userId)
     .eq('id', req.params.id)
 
   if (error) return res.status(500).json({ error: error.message })
@@ -116,13 +116,13 @@ const MAX_CONNECTED_IDEAS = 8
  * precisely in the UI: annotations aren't retrievable sources, so this is
  * "highlights that live on these sources", never "highlights the answer read".
  */
-async function describeContext(items, itemIds) {
+async function describeContext(items, itemIds, userId) {
   const { count: highlights } = itemIds.length
     ? await supabase
         .from('annotations')
         .select('id', { count: 'exact', head: true })
         .in('item_id', itemIds)
-        .eq('user_id', process.env.DEFAULT_USER_ID)
+        .eq('user_id', userId)
     : { count: 0 }
 
   const byType = new Map()
@@ -195,7 +195,7 @@ router.post('/', async (req, res) => {
   const send = (event, data) => res.write(`data: ${JSON.stringify({ event, ...data })}\n\n`)
 
   try {
-    const userId = process.env.DEFAULT_USER_ID
+    const userId = req.userId
     const activeSessionId = await resolveSession(userId, sessionId, query.trim())
 
     send('phase', { phase: 'searching', status: 'active' })
@@ -307,7 +307,7 @@ router.post('/', async (req, res) => {
       sessionId: activeSessionId,
       sections,
       citations,
-      context: await describeContext(items || [], itemIds),
+      context: await describeContext(items || [], itemIds, userId),
       connectedIdeas: connectedIdeas(items || []),
     })
   } catch (err) {

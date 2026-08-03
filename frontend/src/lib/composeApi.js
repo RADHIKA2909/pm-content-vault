@@ -1,4 +1,4 @@
-import { API_URL } from './api.js'
+import { apiFetch } from './apiFetch.js'
 
 // The phases /analyze streams, in order. Labels are what the processing step
 // shows; the keys match the server's event names.
@@ -20,7 +20,7 @@ export const PHASES = [
  * same server-sent-events semantics over POST.
  */
 export async function analyze(formData, { onPhase, signal } = {}) {
-  const res = await fetch(`${API_URL}/api/items/analyze`, {
+  const res = await apiFetch(`/api/items/analyze`, {
     method: 'POST',
     body: formData,
     signal,
@@ -64,14 +64,14 @@ export async function analyze(formData, { onPhase, signal } = {}) {
 }
 
 export async function commit(formData) {
-  const res = await fetch(`${API_URL}/api/items/commit`, { method: 'POST', body: formData })
+  const res = await apiFetch(`/api/items/commit`, { method: 'POST', body: formData })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Could not save')
   return data
 }
 
 export async function fetchLinkPreview(url) {
-  const res = await fetch(`${API_URL}/api/items/link/preview`, {
+  const res = await apiFetch(`/api/items/link/preview`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url }),

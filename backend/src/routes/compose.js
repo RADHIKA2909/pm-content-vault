@@ -221,7 +221,7 @@ router.post('/analyze', upload.fields([{ name: 'file', maxCount: 1 }]), async (r
     send('phase', { phase: 'duplicates', status: 'active' })
     let duplicate = null
     if (embedding) {
-      const match = await findDuplicate(embedding, process.env.DEFAULT_USER_ID)
+      const match = await findDuplicate(embedding, req.userId)
       if (match) {
         const { data } = await supabase
           .from('items')
@@ -285,6 +285,7 @@ router.post('/commit', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'th
       : null
 
     const item = await insertItem({
+      userId: req.userId,
       sourceType: kind,
       rawContent: kind === 'note' ? meta.safeHtml : meta.url || req.body.text || req.body.rawContent || text,
       extractedText: text,
@@ -311,7 +312,7 @@ router.post('/commit', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'th
       await supabase.from('item_categories').insert(
         categories.slice(0, 3).map((category) => ({
           item_id: item.id,
-          user_id: process.env.DEFAULT_USER_ID,
+          user_id: req.userId,
           category,
         })),
       )

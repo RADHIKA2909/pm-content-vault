@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { AlertCircle, ArrowLeft, ArrowRight, Loader2, Sparkles } from 'lucide-react'
-import { API_URL } from '../../lib/api.js'
+import { apiFetch } from '../../lib/apiFetch.js'
 import { analyze, commit } from '../../lib/composeApi.js'
 import { useLocalStorage } from '../../lib/useLocalStorage.js'
 import StepIndicator from './StepIndicator.jsx'
@@ -174,7 +174,7 @@ function AddContentFlow({ onSaved, onNavigate }) {
       const body = await readAsText(waFile)
       setPhases({ extract: 'done', understand: 'active' })
 
-      const res = await fetch(`${API_URL}/api/items/whatsapp`, {
+      const res = await apiFetch(`/api/items/whatsapp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

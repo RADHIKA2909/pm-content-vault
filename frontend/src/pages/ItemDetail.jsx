@@ -17,7 +17,7 @@ import {
   WandSparkles,
   X,
 } from 'lucide-react'
-import { API_URL } from '../lib/api.js'
+import { apiFetch } from '../lib/apiFetch.js'
 import { useToast } from '../components/ToastContext.jsx'
 import { useLocalStorage } from '../lib/useLocalStorage.js'
 import Card from '../components/Card.jsx'
@@ -133,7 +133,7 @@ function ItemDetail() {
   const fetchItem = useCallback(
     async ({ silent = false } = {}) => {
       if (!silent) setLoading(true)
-      const res = await fetch(`${API_URL}/api/items/${id}`)
+      const res = await apiFetch(`/api/items/${id}`)
       if (res.ok) setItem(await res.json())
       if (!silent) setLoading(false)
     },
@@ -142,7 +142,7 @@ function ItemDetail() {
 
   useEffect(() => {
     fetchItem()
-    fetch(`${API_URL}/api/items/${id}/annotations`)
+    apiFetch(`/api/items/${id}/annotations`)
       .then((res) => (res.ok ? res.json() : []))
       .then(setAnnotations)
       .catch(() => setAnnotations([]))
@@ -153,14 +153,14 @@ function ItemDetail() {
   useEffect(() => {
     if (!item || engagedIdRef.current === item.id) return
     engagedIdRef.current = item.id
-    fetch(`${API_URL}/api/items/${item.id}/engage`, { method: 'PATCH' })
+    apiFetch(`/api/items/${item.id}/engage`, { method: 'PATCH' })
   }, [item])
 
   // ── Annotations ────────────────────────────────────────────────────────
   const sortAnnotations = (list) => [...list].sort((a, b) => a.start_offset - b.start_offset)
 
   const createAnnotation = async (payload) => {
-    const res = await fetch(`${API_URL}/api/items/${id}/annotations`, {
+    const res = await apiFetch(`/api/items/${id}/annotations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -175,7 +175,7 @@ function ItemDetail() {
   }
 
   const patchAnnotation = async (annotation, updates) => {
-    const res = await fetch(`${API_URL}/api/annotations/${annotation.id}`, {
+    const res = await apiFetch(`/api/annotations/${annotation.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
@@ -189,7 +189,7 @@ function ItemDetail() {
 
   const deleteAnnotation = async (annotation) => {
     setAnnotations((prev) => prev.filter((a) => a.id !== annotation.id))
-    const res = await fetch(`${API_URL}/api/annotations/${annotation.id}`, { method: 'DELETE' })
+    const res = await apiFetch(`/api/annotations/${annotation.id}`, { method: 'DELETE' })
     if (!res.ok) {
       showToast('Could not delete that annotation', 'error')
       setAnnotations((prev) => sortAnnotations([...prev, annotation]))
@@ -208,7 +208,7 @@ function ItemDetail() {
 
   // ── Item-level actions ─────────────────────────────────────────────────
   const handleFieldSave = async (fields) => {
-    const res = await fetch(`${API_URL}/api/items/${id}`, {
+    const res = await apiFetch(`/api/items/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(fields),
@@ -224,7 +224,7 @@ function ItemDetail() {
   }
 
   const setStatus = async (patch, message) => {
-    const res = await fetch(`${API_URL}/api/items/${id}/status`, {
+    const res = await apiFetch(`/api/items/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
@@ -239,7 +239,7 @@ function ItemDetail() {
 
   const handleToggleFavorite = async () => {
     const isFavorite = item.tags?.some((t) => t.tag === FAVORITE_TAG)
-    await fetch(`${API_URL}/api/items/${id}/tags`, {
+    await apiFetch(`/api/items/${id}/tags`, {
       method: isFavorite ? 'DELETE' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tag: FAVORITE_TAG }),
@@ -260,7 +260,7 @@ function ItemDetail() {
   }
 
   const handleDelete = async () => {
-    await fetch(`${API_URL}/api/items/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/items/${id}`, { method: 'DELETE' })
     showToast('Item deleted')
     navigate('/library')
   }

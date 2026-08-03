@@ -34,7 +34,7 @@ router.get('/items/:id/annotations', async (req, res) => {
     .from('annotations')
     .select(SELECT)
     .eq('item_id', req.params.id)
-    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .eq('user_id', req.userId)
     .order('start_offset', { ascending: true })
 
   if (error) return res.status(500).json({ error: error.message })
@@ -66,7 +66,7 @@ router.post('/items/:id/annotations', async (req, res) => {
     .from('items')
     .select('id')
     .eq('id', req.params.id)
-    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .eq('user_id', req.userId)
     .maybeSingle()
 
   if (!item) return res.status(404).json({ error: 'Item not found' })
@@ -75,7 +75,7 @@ router.post('/items/:id/annotations', async (req, res) => {
     .from('annotations')
     .insert({
       item_id: req.params.id,
-      user_id: process.env.DEFAULT_USER_ID,
+      user_id: req.userId,
       start_offset: startOffset,
       end_offset: endOffset,
       quote: quote.slice(0, MAX_QUOTE),
@@ -117,7 +117,7 @@ router.patch('/annotations/:annotationId', async (req, res) => {
     .from('annotations')
     .update(updates)
     .eq('id', req.params.annotationId)
-    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .eq('user_id', req.userId)
     .select(SELECT)
     .single()
 
@@ -130,7 +130,7 @@ router.delete('/annotations/:annotationId', async (req, res) => {
     .from('annotations')
     .delete()
     .eq('id', req.params.annotationId)
-    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .eq('user_id', req.userId)
 
   if (error) return res.status(500).json({ error: error.message })
   res.status(204).end()

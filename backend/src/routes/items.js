@@ -21,8 +21,8 @@ import supabase from '../services/supabaseClient.js'
 const router = Router()
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } })
 
-// v0: no auth yet, so every item is saved under the fixed DEFAULT_USER_ID
-// (see services/itemsRepo.js).
+// Every query is scoped to req.userId, established by the requireAuth
+// middleware from a Supabase-verified token (see middleware/requireAuth.js).
 
 function normalizeLabel(value) {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : ''
@@ -63,12 +63,12 @@ function parseCategories(categories) {
  * still reads a single value (the classifier, chat's vault index, dedup) —
  * writing both here is what stops the two representations drifting apart.
  */
-async function setCategories(itemId, categories) {
+async function setCategories(itemId, categories, userId) {
   const list = categories.length ? categories.slice(0, MAX_CATEGORIES) : [FALLBACK_CATEGORY]
 
   await supabase.from('item_categories').delete().eq('item_id', itemId)
   await supabase.from('item_categories').insert(
-    list.map((category) => ({ item_id: itemId, user_id: process.env.DEFAULT_USER_ID, category })),
+    list.map((category) => ({ item_id: itemId, user_id: userId, category })),
   )
   await supabase.from('items').update({ category: list[0] }).eq('id', itemId)
 
@@ -87,7 +87,7 @@ async function setCategories(itemId, categories) {
  * index. A unique violation means the tag is now present, which is exactly what
  * the caller asked for, so it's swallowed rather than surfaced as a failure.
  */
-async function addTags(itemId, tags) {
+async function addTags(itemId, tags, userId) {
   const wanted = [...new Set(tags.map((t) => t.trim()).filter(Boolean))]
   if (!wanted.length) return { error: null }
 
@@ -95,7 +95,7 @@ async function addTags(itemId, tags) {
     .from('tags')
     .select('tag')
     .eq('item_id', itemId)
-    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .eq('user_id', userId)
 
   if (readError) return { error: readError }
 
@@ -105,7 +105,7 @@ async function addTags(itemId, tags) {
 
   const { error } = await supabase
     .from('tags')
-    .insert(missing.map((tag) => ({ item_id: itemId, user_id: process.env.DEFAULT_USER_ID, tag })))
+    .insert(missing.map((tag) => ({ item_id: itemId, user_id: userId, tag })))
 
   if (error && error.code === '23505') return { error: null }
   return { error }
@@ -129,7 +129,7 @@ function packTitle(title, subtitle) {
 // Declared before GET /:id, same as /categories below, or Express matches
 // "stats" as an item id.
 router.get('/stats', async (req, res) => {
-  const userId = process.env.DEFAULT_USER_ID
+  const userId = req.userId
 
   const [{ data: items }, { count: highlights }] = await Promise.all([
     supabase.from('items').select('source_type, category').eq('user_id', userId).is('archived_at', null),
@@ -153,7 +153,7 @@ router.get('/categories', async (req, res) => {
   const { data, error } = await supabase
     .from('item_categories')
     .select('category')
-    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .eq('user_id', req.userId)
 
   if (error) return res.status(500).json({ error: error.message })
 
@@ -184,7 +184,7 @@ router.get('/', async (req, res) => {
     .select(
       'id, source_type, raw_content, file_url, thumbnail_url, link_type, notes, title, summary, author, category, subcategory, created_at, last_engaged_at, read_at, archived_at, tags(tag, created_at), item_categories(category, created_at)',
     )
-    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .eq('user_id', req.userId)
     .order('created_at', { ascending: false })
 
   if (archived === 'only') query = query.not('archived_at', 'is', null)
@@ -201,7 +201,7 @@ router.get('/', async (req, res) => {
   const { data: duplicateRows } = await supabase
     .from('duplicates')
     .select('item_id, duplicate_of_item_id, similarity_score')
-    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .eq('user_id', req.userId)
 
   const duplicateByItemId = new Map((duplicateRows || []).map((d) => [d.item_id, d]))
   const originalIds = (duplicateRows || []).map((d) => d.duplicate_of_item_id)
@@ -239,7 +239,7 @@ router.get('/', async (req, res) => {
 // related items (via the same match_embeddings RPC used by chat/dedup).
 router.get('/:id', async (req, res) => {
   const { id } = req.params
-  const userId = process.env.DEFAULT_USER_ID
+  const userId = req.userId
 
   const { data: item, error } = await supabase
     .from('items')
@@ -333,6 +333,7 @@ router.post('/', async (req, res) => {
 
   try {
     const item = await insertItem({
+      userId: req.userId,
       // Plain pasted text. Not 'linkedin_paste' — that badged every paste as
       // LinkedIn regardless of where it actually came from.
       sourceType: 'text',
@@ -347,7 +348,7 @@ router.post('/', async (req, res) => {
     })
     // The AI's pick only stands in when the user chose nothing; either way the
     // item ends up with at least one category.
-    await setCategories(item.id, chosen.length ? chosen : [enrichment.category].filter(Boolean))
+    await setCategories(item.id, chosen.length ? chosen : [enrichment.category].filter(Boolean, req.userId))
     res.status(201).json({ ...item, ...enrichment })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -387,6 +388,7 @@ router.post('/link', async (req, res) => {
     }
 
     const item = await insertItem({
+      userId: req.userId,
       sourceType: 'link',
       rawContent: url,
       // Link-only saves still store the URL so the item stays searchable.
@@ -406,7 +408,7 @@ router.post('/link', async (req, res) => {
     })
     // The AI's pick only stands in when the user chose nothing; either way the
     // item ends up with at least one category.
-    await setCategories(item.id, chosen.length ? chosen : [enrichment.category].filter(Boolean))
+    await setCategories(item.id, chosen.length ? chosen : [enrichment.category].filter(Boolean, req.userId))
     res.status(201).json({ ...item, ...enrichment })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -450,6 +452,7 @@ router.post('/note', async (req, res) => {
     const thumbnail = pastedImage || (linkedPage ? await fetchPageImage(linkedPage) : null)
 
     const item = await insertItem({
+      userId: req.userId,
       sourceType: 'note',
       rawContent: safeHtml,
       // Falls back to a placeholder for image-only notes so the row still
@@ -464,7 +467,7 @@ router.post('/note', async (req, res) => {
     })
     // The AI's pick only stands in when the user chose nothing; either way the
     // item ends up with at least one category.
-    await setCategories(item.id, chosen.length ? chosen : [enrichment.category].filter(Boolean))
+    await setCategories(item.id, chosen.length ? chosen : [enrichment.category].filter(Boolean, req.userId))
     res.status(201).json({ ...item, ...enrichment })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -492,6 +495,7 @@ router.post('/image', upload.single('file'), async (req, res) => {
     const fileUrl = await uploadFile(req.file.buffer, extension, req.file.mimetype)
 
     const item = await insertItem({
+      userId: req.userId,
       sourceType: 'image',
       rawContent: req.file.originalname,
       extractedText: text?.trim() || null,
@@ -505,7 +509,7 @@ router.post('/image', upload.single('file'), async (req, res) => {
     })
     // The AI's pick only stands in when the user chose nothing; either way the
     // item ends up with at least one category.
-    await setCategories(item.id, chosen.length ? chosen : [enrichment.category].filter(Boolean))
+    await setCategories(item.id, chosen.length ? chosen : [enrichment.category].filter(Boolean, req.userId))
     res.status(201).json({ ...item, ...enrichment })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -540,6 +544,7 @@ router.post('/pdf', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'thumb
     }
 
     const item = await insertItem({
+      userId: req.userId,
       sourceType: 'pdf',
       rawContent: pdfFile.originalname,
       extractedText: parsed.text.slice(0, 20000),
@@ -554,7 +559,7 @@ router.post('/pdf', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'thumb
     })
     // The AI's pick only stands in when the user chose nothing; either way the
     // item ends up with at least one category.
-    await setCategories(item.id, chosen.length ? chosen : [enrichment.category].filter(Boolean))
+    await setCategories(item.id, chosen.length ? chosen : [enrichment.category].filter(Boolean, req.userId))
     res.status(201).json({ ...item, ...enrichment })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -578,7 +583,7 @@ router.post('/whatsapp', async (req, res) => {
   }
 
   try {
-    const items = await insertItems(parsedMessages.map((m) => ({ ...m, notes })))
+    const items = await insertItems(parsedMessages.map((m) => ({ ...m, notes })), req.userId)
     res.status(201).json({ count: items.length, items })
 
     // Enrichment runs in the background so bulk exports (which can be
@@ -611,7 +616,7 @@ router.post('/:id/tags', async (req, res) => {
     return res.status(400).json({ error: 'tag is required' })
   }
 
-  const { error } = await addTags(id, [tag])
+  const { error } = await addTags(id, [tag], req.userId)
   if (error) return res.status(500).json({ error: error.message })
   res.status(201).json({ tag })
 })
@@ -649,7 +654,7 @@ router.patch('/:id', async (req, res) => {
     if (!chosen.length) {
       return res.status(400).json({ error: 'Pick at least one category' })
     }
-    await setCategories(id, chosen)
+    await setCategories(id, chosen, req.userId)
   }
 
   if (Object.keys(updates).length === 0 && categories !== undefined) {
@@ -675,7 +680,7 @@ router.patch('/:id', async (req, res) => {
     .from('items')
     .update(updates)
     .eq('id', id)
-    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .eq('user_id', req.userId)
     .select('*, item_categories(category)')
     .single()
 
@@ -702,7 +707,7 @@ const RELATED_CHUNK_COUNT = 4
 router.post('/:id/chat', async (req, res) => {
   const { id } = req.params
   const { query, history } = req.body
-  const userId = process.env.DEFAULT_USER_ID
+  const userId = req.userId
 
   if (!query || !query.trim()) {
     return res.status(400).json({ error: 'query is required' })
@@ -807,7 +812,7 @@ router.delete('/:id/tags', async (req, res) => {
     .from('tags')
     .delete()
     .eq('item_id', id)
-    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .eq('user_id', req.userId)
     .eq('tag', tag)
 
   if (error) return res.status(500).json({ error: error.message })
@@ -852,7 +857,7 @@ router.patch('/:id/status', async (req, res) => {
     .from('items')
     .update(updates)
     .eq('id', req.params.id)
-    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .eq('user_id', req.userId)
     .select('id, read_at, archived_at')
     .single()
 
@@ -869,7 +874,7 @@ router.delete('/:id', async (req, res) => {
     .from('items')
     .delete()
     .eq('id', id)
-    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .eq('user_id', req.userId)
 
   if (error) return res.status(500).json({ error: error.message })
   res.status(204).end()

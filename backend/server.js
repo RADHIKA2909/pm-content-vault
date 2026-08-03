@@ -5,14 +5,22 @@ import itemsRouter from './src/routes/items.js'
 import composeRouter from './src/routes/compose.js'
 import chatRouter from './src/routes/chat.js'
 import annotationsRouter from './src/routes/annotations.js'
+import { requireAuth } from './src/middleware/requireAuth.js'
 
 const app = express()
 app.use(cors())
 app.use(express.json())
 
+// Unauthenticated on purpose — it reports that the process is up and says
+// nothing about anyone's data.
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' })
 })
+
+// Everything under /api requires a verified session. Mounted here rather than
+// per-router so a new route file can't be added later and quietly ship
+// unauthenticated: the default for anything under this path is now "closed".
+app.use('/api', requireAuth)
 
 // Mounted ahead of itemsRouter so /analyze and /commit resolve here before
 // they can be mistaken for an item id; anything unmatched falls through.

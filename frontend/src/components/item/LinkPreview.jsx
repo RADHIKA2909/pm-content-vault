@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { API_URL } from '../../lib/api.js'
+import { apiFetch } from '../../lib/apiFetch.js'
 
 // Module-level so hovering the same link twice in a session costs nothing.
 // A miss is a full server-side page fetch, which is far too expensive to
@@ -36,7 +36,7 @@ function LinkPreview({ url, x, y }) {
     let cancelled = false
     setLoading(true)
 
-    fetch(`${API_URL}/api/items/link/preview`, {
+    apiFetch(`/api/items/link/preview`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),

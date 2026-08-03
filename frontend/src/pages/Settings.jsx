@@ -7,14 +7,16 @@ import {
   Link as LinkIcon,
   List,
   Settings as SettingsIcon,
+  LogOut,
   Sliders,
   Sparkles,
   Trash2,
   User,
 } from 'lucide-react'
-import { API_URL } from '../lib/api.js'
+import { apiFetch } from '../lib/apiFetch.js'
 import { useToast } from '../components/ToastContext.jsx'
 import { usePreference } from '../lib/preferences.js'
+import { useAuth } from '../components/auth/AuthProvider.jsx'
 import SettingsCard from '../components/settings/SettingsCard.jsx'
 import SettingRow from '../components/settings/SettingRow.jsx'
 import SegmentedControl from '../components/settings/SegmentedControl.jsx'
@@ -53,12 +55,19 @@ function Settings() {
   const [stats, setStats] = useState(null)
   const [resetOpen, setResetOpen] = useState(false)
 
+  const { user, signOut } = useAuth()
   const { showToast } = useToast()
+
+  // Supabase records which provider the identity came from. Read rather than
+  // assumed — this account could be Google or email/password, and the card
+  // should say which.
+  const providerLabel =
+    user?.app_metadata?.provider === 'google' ? 'Google' : 'email and password'
   const reduceMotion = useReducedMotion()
 
   const loadStats = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/api/items/stats`)
+      const res = await apiFetch(`/api/items/stats`)
       setStats(res.ok ? await res.json() : null)
     } catch {
       setStats(null)
@@ -74,11 +83,11 @@ function Settings() {
   // items are the only thing that has to be asked for.
   const resetVault = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/items`)
+      const res = await apiFetch(`/api/items`)
       const items = res.ok ? await res.json() : []
 
       await Promise.all(
-        items.map((item) => fetch(`${API_URL}/api/items/${item.id}`, { method: 'DELETE' })),
+        items.map((item) => apiFetch(`/api/items/${item.id}`, { method: 'DELETE' })),
       )
 
       setResetOpen(false)
@@ -113,24 +122,34 @@ function Settings() {
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-5">
-          {/* No sign-in exists in v0 — every item is saved under one fixed
-              account, and CLAUDE.md defers multi-user. So this card describes
-              what's actually true rather than inventing a session, an email
-              and a Sign out button with nothing behind it. */}
+          {/* This card was a placeholder describing single-user mode, because
+              there was no session to describe. Now there is one, and every
+              value below comes from it. */}
           <SettingsCard
             icon={User}
-            title="This vault"
-            description="Who this data belongs to."
+            title="Account"
+            description="The account this vault belongs to."
             tone="secondary"
             delay={0}
           >
             <SettingRow
-              label="Single-user mode"
-              description="There's no sign-in yet. Everything you save belongs to one local vault on this machine."
+              label={user?.email || 'Signed in'}
+              description={`Signed in with ${providerLabel}. Everything you save is private to this account.`}
             >
-              <span className="inline-flex items-center gap-2 rounded-xl bg-muted px-3 py-2 text-caption font-medium text-text-secondary">
-                Accounts coming later
-              </span>
+              <div className="flex items-center gap-2.5">
+                <span
+                  aria-hidden="true"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-light text-[15px] font-semibold uppercase text-primary"
+                >
+                  {(user?.email || '?')[0]}
+                </span>
+                <button
+                  onClick={signOut}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-surface px-3.5 py-2 text-sm font-medium text-text-primary shadow-card ring-1 ring-border-subtle transition-colors duration-200 hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <LogOut className="h-4 w-4" strokeWidth={1.75} /> Sign out
+                </button>
+              </div>
             </SettingRow>
           </SettingsCard>
 

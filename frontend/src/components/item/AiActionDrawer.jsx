@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import { Baby, BookMarked, Copy, Layers, Library, Lightbulb, Sparkles, TextQuote, X } from 'lucide-react'
-import { API_URL } from '../../lib/api.js'
+import { apiFetch } from '../../lib/apiFetch.js'
 import { Sources, TypingDots } from '../ChatMessages.jsx'
 
 /**
@@ -92,7 +92,7 @@ function AiActionDrawer({ open, itemId, selection, onClose, onSaveAsNote }) {
     setLoading(true)
 
     try {
-      const res = await fetch(`${API_URL}/api/items/${itemId}/chat`, {
+      const res = await apiFetch(`/api/items/${itemId}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: chosen.prompt(selection.quote) }),

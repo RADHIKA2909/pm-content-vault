@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { BrainCircuit, GraduationCap, Link2, SendHorizontal, Sparkles, Target } from 'lucide-react'
-import { API_URL } from '../lib/api.js'
+import { apiFetch } from '../lib/apiFetch.js'
 import Card from './Card.jsx'
 import { MessageBubble, TypingDots } from './ChatMessages.jsx'
 
@@ -64,7 +64,7 @@ function ItemChatPanel({ itemId }) {
     setLoading(true)
 
     try {
-      const res = await fetch(`${API_URL}/api/items/${itemId}/chat`, {
+      const res = await apiFetch(`/api/items/${itemId}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: text, history }),

@@ -5,6 +5,7 @@ import supabase from './supabaseClient.js'
 // columns a job posting fills in. Passed straight through so a reviewed item is
 // written correct in one insert rather than inserted blank and patched after.
 export async function insertItem({
+  userId,
   sourceType,
   rawContent,
   extractedText,
@@ -17,7 +18,7 @@ export async function insertItem({
   const { data, error } = await supabase
     .from('items')
     .insert({
-      user_id: process.env.DEFAULT_USER_ID,
+      user_id: userId,
       source_type: sourceType,
       raw_content: rawContent,
       extracted_text: extractedText,
@@ -34,12 +35,12 @@ export async function insertItem({
   return data
 }
 
-export async function insertItems(rows) {
+export async function insertItems(rows, userId) {
   const { data, error } = await supabase
     .from('items')
     .insert(
       rows.map((row) => ({
-        user_id: process.env.DEFAULT_USER_ID,
+        user_id: userId,
         source_type: row.sourceType,
         raw_content: row.rawContent,
         extracted_text: row.extractedText,

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { BookOpen, ChevronDown, Plus, SlidersHorizontal, X } from 'lucide-react'
-import { API_URL } from '../lib/api.js'
+import { apiFetch } from '../lib/apiFetch.js'
 import { useToast } from '../components/ToastContext.jsx'
 import { useLocalStorage } from '../lib/useLocalStorage.js'
 import { FAVORITE_TAG, itemCategories } from '../lib/categories.js'
@@ -72,7 +72,7 @@ function Library() {
     setError(null)
 
     try {
-      const res = await fetch(`${API_URL}/api/items?archived=include`)
+      const res = await apiFetch(`/api/items?archived=include`)
       if (!res.ok) throw new Error('Failed to load items')
       const data = await res.json()
       setAllItems(data)
@@ -138,7 +138,7 @@ function Library() {
   }
 
   const handleToggleFavorite = async (id, isFavorite) => {
-    await fetch(`${API_URL}/api/items/${id}/tags`, {
+    await apiFetch(`/api/items/${id}/tags`, {
       method: isFavorite ? 'DELETE' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tag: FAVORITE_TAG }),
@@ -150,7 +150,7 @@ function Library() {
 
   const handleDelete = async () => {
     const id = pendingDeleteId
-    await fetch(`${API_URL}/api/items/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/items/${id}`, { method: 'DELETE' })
     setAllItems((prev) => prev.filter((i) => i.id !== id))
     showToast('Item deleted')
   }

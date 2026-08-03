@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Plus, X } from 'lucide-react'
-import { API_URL } from '../lib/api.js'
+import { apiFetch } from '../lib/apiFetch.js'
 import { MAX_CATEGORIES } from '../lib/categories.js'
 
 // Everything available to pick: the fixed taxonomy plus anything the user has
@@ -11,7 +11,7 @@ function useKnownCategories() {
   useEffect(() => {
     let cancelled = false
 
-    fetch(`${API_URL}/api/items/categories`)
+    apiFetch(`/api/items/categories`)
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => !cancelled && setCategories(data.map((c) => c.category)))
       .catch(() => {})

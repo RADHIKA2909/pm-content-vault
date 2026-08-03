@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Copy, FolderTree, Layers, Lightbulb, Plus, Search, Star } from 'lucide-react'
-import { API_URL } from '../lib/api.js'
+import { apiFetch } from '../lib/apiFetch.js'
 import { FAVORITE_TAG, itemCategories } from '../lib/categories.js'
 import Button from '../components/Button.jsx'
 import Modal from '../components/Modal.jsx'
@@ -41,8 +41,8 @@ function Dashboard() {
     setLoading(true)
     try {
       const [itemsRes, historyRes] = await Promise.all([
-        fetch(`${API_URL}/api/items`),
-        fetch(`${API_URL}/api/chat/history`),
+        apiFetch(`/api/items`),
+        apiFetch(`/api/chat/history`),
       ])
       setItems(await itemsRes.json())
       setChatHistory(await historyRes.json())

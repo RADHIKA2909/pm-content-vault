@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { CheckSquare, ChevronDown, Star } from 'lucide-react'
-import { API_URL } from '../lib/api.js'
+import { apiFetch } from '../lib/apiFetch.js'
 import { useToast } from '../components/ToastContext.jsx'
 import { useLocalStorage } from '../lib/useLocalStorage.js'
 import { FAVORITE_TAG, itemCategories } from '../lib/categories.js'
@@ -54,7 +54,7 @@ function Favorites() {
 
   const fetchItems = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true)
-    const res = await fetch(`${API_URL}/api/items`)
+    const res = await apiFetch(`/api/items`)
     if (res.ok) setItems(await res.json())
     if (!silent) setLoading(false)
   }, [])
@@ -120,7 +120,7 @@ function Favorites() {
   }
 
   const unfavorite = (item) =>
-    fetch(`${API_URL}/api/items/${item.id}/tags`, {
+    apiFetch(`/api/items/${item.id}/tags`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tag: FAVORITE_TAG }),
@@ -134,7 +134,7 @@ function Favorites() {
 
   const handleDelete = async () => {
     const id = pendingDeleteId
-    await fetch(`${API_URL}/api/items/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/items/${id}`, { method: 'DELETE' })
     setItems((prev) => prev.filter((i) => i.id !== id))
     showToast('Item deleted')
   }
@@ -156,7 +156,7 @@ function Favorites() {
     setMoveOpen(false)
     await runOnSelected(
       (item) =>
-        fetch(`${API_URL}/api/items/${item.id}`, {
+        apiFetch(`/api/items/${item.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ categories }),
@@ -359,7 +359,7 @@ function Favorites() {
         onClose={() => setBulkDeleteOpen(false)}
         onConfirm={() =>
           runOnSelected(
-            (item) => fetch(`${API_URL}/api/items/${item.id}`, { method: 'DELETE' }),
+            (item) => apiFetch(`/api/items/${item.id}`, { method: 'DELETE' }),
             (n) => `Deleted ${n} ${n === 1 ? 'item' : 'items'}`,
           )
         }

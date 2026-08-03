@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { Bold, Highlighter, Image as ImageIcon, Italic, Link2, List, ListOrdered, Underline } from 'lucide-react'
-import { API_URL } from '../lib/api.js'
+import { apiFetch } from '../lib/apiFetch.js'
 import Button from './Button.jsx'
 
 const BARE_URL = /^https?:\/\/\S+$/i
@@ -129,7 +129,7 @@ const RichTextEditor = forwardRef(function RichTextEditor(
       const formData = new FormData()
       formData.append('file', file)
 
-      const res = await fetch(`${API_URL}/api/items/note/image`, { method: 'POST', body: formData })
+      const res = await apiFetch(`/api/items/note/image`, { method: 'POST', body: formData })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Image upload failed')
 
