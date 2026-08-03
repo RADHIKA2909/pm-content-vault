@@ -11,6 +11,7 @@ import {
   SORTS,
   activeFilterCount,
   filterItems,
+  scopeByArchived,
   sortItems,
   sourceUrl,
 } from '../lib/itemFilters.js'
@@ -44,7 +45,9 @@ function Library() {
   const navigate = useNavigate()
   const { showToast } = useToast()
 
-  const [items, setItems] = useState([])
+  // Archived rows are fetched too, so the Archived filter switches instantly
+  // instead of round-tripping. `items` below is the scoped view of them.
+  const [allItems, setAllItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -69,10 +72,10 @@ function Library() {
     setError(null)
 
     try {
-      const res = await fetch(`${API_URL}/api/items`)
+      const res = await fetch(`${API_URL}/api/items?archived=include`)
       if (!res.ok) throw new Error('Failed to load items')
       const data = await res.json()
-      setItems(data)
+      setAllItems(data)
 
       // The API returns newest-first, so the just-saved row is data[0].
       if (markNewest && data.length) {
@@ -106,6 +109,11 @@ function Library() {
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [drawerOpen])
+
+  // What's in the Library at all, before search and the narrowing filters.
+  // Everything downstream — the counts, the pills, the "N items" total — reads
+  // from here, so archiving an item removes it from all of them at once.
+  const items = useMemo(() => scopeByArchived(allItems, filters.archived), [allItems, filters.archived])
 
   const categoryCounts = useMemo(() => {
     const counts = {}
@@ -143,7 +151,7 @@ function Library() {
   const handleDelete = async () => {
     const id = pendingDeleteId
     await fetch(`${API_URL}/api/items/${id}`, { method: 'DELETE' })
-    setItems((prev) => prev.filter((i) => i.id !== id))
+    setAllItems((prev) => prev.filter((i) => i.id !== id))
     showToast('Item deleted')
   }
 

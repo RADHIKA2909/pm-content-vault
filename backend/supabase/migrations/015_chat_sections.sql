@@ -1,0 +1,11 @@
+-- Answers stopped being a blob of markdown.
+--
+-- Ask My Vault now asks Gemini for structured sections — an overview, an
+-- optional pair of comparison cards, a key takeaway, follow-up prompts — and
+-- renders each one differently. answer_text alone can't carry that: replaying a
+-- saved conversation would flatten every answer back into a paragraph, so a
+-- chat you reopen would look nothing like the one you had.
+--
+-- Nullable on purpose. Rows written before this migration keep rendering from
+-- answer_text as plain markdown, which is exactly what they were.
+alter table chat_queries add column if not exists answer_sections jsonb;

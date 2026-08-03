@@ -115,7 +115,7 @@ async function extractContent(kind, body, files) {
       }
       return {
         text: [body.notes, result.extractedText].filter((v) => v?.trim()).join('\n\n').trim() || url,
-        meta: { url, linkType: body.linkType || 'other', imageUrl: result.imageUrl },
+        meta: { url, linkType: body.linkType || 'other', imageUrl: result.imageUrl, author: result.author },
       }
     }
 
@@ -294,6 +294,9 @@ router.post('/commit', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'th
       notes,
       title: packedTitle,
       summary: summary?.trim() || null,
+      // Parsed out of the page's own metadata (linkExtractor.js); null for
+      // everything that isn't a link with an identifiable author.
+      author: meta.author || null,
       category: categories[0] || null,
       key_points: keyPoints.length ? keyPoints : null,
       // Only populated for job postings; null everywhere else.

@@ -2,7 +2,14 @@ import { useMemo } from 'react'
 import { ChevronDown, FolderOpen, SlidersHorizontal } from 'lucide-react'
 import { CATEGORIES } from '../../lib/categories.js'
 import { categoryColor } from '../../lib/categoryColors.js'
-import { DATE_RANGES, DUPLICATE_FILTERS, SOURCE_FILTERS, activeFilterCount } from '../../lib/itemFilters.js'
+import {
+  ARCHIVED_FILTERS,
+  DEFAULT_FILTERS,
+  DATE_RANGES,
+  DUPLICATE_FILTERS,
+  SOURCE_FILTERS,
+  activeFilterCount,
+} from '../../lib/itemFilters.js'
 
 // Native <select> on purpose: full keyboard support, correct behaviour on
 // touch, and it can't drift out of sync with the platform. Only the chrome is
@@ -97,7 +104,7 @@ function FilterPanel({ filters, onChange, counts, selectedCategory, onSelectCate
           )}
           {active > 0 && (
             <button
-              onClick={() => onChange({ source: '', date: '', duplicates: '', favoritesOnly: false })}
+              onClick={() => onChange(DEFAULT_FILTERS)}
               className="ml-auto rounded-lg px-1.5 py-0.5 text-caption font-medium text-primary transition-colors duration-150 hover:bg-primary-light focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               Clear all
@@ -113,6 +120,12 @@ function FilterPanel({ filters, onChange, counts, selectedCategory, onSelectCate
             value={filters.duplicates}
             options={DUPLICATE_FILTERS}
             onChange={(v) => set({ duplicates: v })}
+          />
+          <Field
+            label="Archived"
+            value={filters.archived}
+            options={ARCHIVED_FILTERS}
+            onChange={(v) => set({ archived: v })}
           />
           <div className="border-t border-border-subtle pt-2.5">
             <Switch

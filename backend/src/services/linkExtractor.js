@@ -255,6 +255,7 @@ export async function extractFromUrl(url) {
   return {
     ok: true,
     title: pageTitle,
+    author,
     imageUrl,
     extractedText: [heading, bodyText.slice(0, MAX_BODY_LENGTH)].filter(Boolean).join('\n\n'),
   }

@@ -120,6 +120,32 @@ function packTitle(title, subtitle) {
   return cleanSubtitle ? `${cleanTitle}::${cleanSubtitle}` : cleanTitle
 }
 
+// Headline counts for "your vault at a glance" in Ask My Vault.
+//
+// Notes counts the pieces the user wrote themselves, not everything with a
+// note attached — the panel sits beside an assistant claiming to reason over
+// their knowledge, so "notes" has to mean their own words.
+//
+// Declared before GET /:id, same as /categories below, or Express matches
+// "stats" as an item id.
+router.get('/stats', async (req, res) => {
+  const userId = process.env.DEFAULT_USER_ID
+
+  const [{ data: items }, { count: highlights }] = await Promise.all([
+    supabase.from('items').select('source_type, category').eq('user_id', userId).is('archived_at', null),
+    supabase.from('annotations').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+  ])
+
+  const rows = items || []
+
+  res.json({
+    items: rows.length,
+    notes: rows.filter((i) => i.source_type === 'note').length,
+    highlights: highlights || 0,
+    categories: new Set(rows.map((i) => i.category).filter(Boolean)).size,
+  })
+})
+
 // Every category available to pick from: the fixed taxonomy plus any the user
 // has invented, with usage counts.
 // Declared before GET /:id, or Express matches "categories" as an item id.
@@ -144,16 +170,25 @@ router.get('/categories', async (req, res) => {
 })
 
 // Dashboard listing — optionally filtered by category.
+//
+// Archived items are excluded unless asked for. Archiving is meant to take an
+// item out of sight everywhere at once, so the default has to be the quiet one
+// — the Dashboard's counts would otherwise keep counting things the user has
+// explicitly put away. `?archived=include` is what the Library uses, so its
+// Archived filter can toggle without a refetch.
 router.get('/', async (req, res) => {
-  const { category } = req.query
+  const { category, archived } = req.query
 
   let query = supabase
     .from('items')
     .select(
-      'id, source_type, raw_content, file_url, thumbnail_url, link_type, notes, title, summary, category, subcategory, created_at, last_engaged_at, tags(tag, created_at), item_categories(category, created_at)',
+      'id, source_type, raw_content, file_url, thumbnail_url, link_type, notes, title, summary, author, category, subcategory, created_at, last_engaged_at, read_at, archived_at, tags(tag, created_at), item_categories(category, created_at)',
     )
     .eq('user_id', process.env.DEFAULT_USER_ID)
     .order('created_at', { ascending: false })
+
+  if (archived === 'only') query = query.not('archived_at', 'is', null)
+  else if (archived !== 'include') query = query.is('archived_at', null)
 
   if (category) query = query.eq('category', category)
 
@@ -209,7 +244,7 @@ router.get('/:id', async (req, res) => {
   const { data: item, error } = await supabase
     .from('items')
     .select(
-      'id, source_type, raw_content, extracted_text, formatted_content, file_url, thumbnail_url, link_type, notes, title, summary, key_points, company, role, apply_url, salary, deadline, category, subcategory, created_at, last_engaged_at, tags(tag, created_at), item_categories(category, created_at)',
+      'id, source_type, raw_content, extracted_text, formatted_content, file_url, thumbnail_url, link_type, notes, title, summary, key_points, author, company, role, apply_url, salary, deadline, category, subcategory, created_at, last_engaged_at, read_at, archived_at, tags(tag, created_at), item_categories(category, created_at)',
     )
     .eq('id', id)
     .eq('user_id', userId)
@@ -251,15 +286,31 @@ router.get('/:id', async (req, res) => {
       match_count: 6,
     })
 
-    const relatedIds = (matches || []).map((m) => m.item_id).filter((matchId) => matchId !== id)
-    const uniqueRelatedIds = [...new Set(relatedIds)].slice(0, 5)
+    // The RPC returns a similarity per chunk and an item can have several, so
+    // each item keeps its best-matching chunk's score. That number was being
+    // computed and thrown away — showing it is what turns "Related items" from
+    // an unexplained list into a ranked one.
+    const bestByItem = new Map()
+    for (const match of matches || []) {
+      if (match.item_id === id) continue
+      const best = bestByItem.get(match.item_id)
+      if (!best || match.similarity > best) bestByItem.set(match.item_id, match.similarity)
+    }
+
+    const uniqueRelatedIds = [...bestByItem.keys()].slice(0, 5)
 
     if (uniqueRelatedIds.length) {
       const { data: relatedRows } = await supabase
         .from('items')
-        .select('id, title, summary, category, source_type, created_at')
+        .select('id, title, summary, category, source_type, link_type, file_url, thumbnail_url, created_at')
         .in('id', uniqueRelatedIds)
-      relatedItems = relatedRows || []
+        // Archiving takes an item out of sight everywhere, suggestions
+        // included — otherwise it comes straight back through the side door.
+        .is('archived_at', null)
+
+      relatedItems = (relatedRows || [])
+        .map((row) => ({ ...row, similarity: bestByItem.get(row.id) }))
+        .sort((a, b) => b.similarity - a.similarity)
     }
   }
 
@@ -318,6 +369,7 @@ router.post('/link', async (req, res) => {
   try {
     let fetchedText = null
     let imageUrl = null
+    let author = null
 
     if (manualContent?.trim()) {
       // User pasted the content themselves after a failed fetch.
@@ -331,6 +383,7 @@ router.post('/link', async (req, res) => {
       }
       fetchedText = result.extractedText
       imageUrl = result.imageUrl
+      author = result.author
     }
 
     const item = await insertItem({
@@ -342,6 +395,9 @@ router.post('/link', async (req, res) => {
       notes,
       // For links this is the post's own og:image, shown inline in detail.
       fileUrl: imageUrl,
+      // Parsed out of the page's own metadata; null when there's no
+      // identifiable author, which is most of the web.
+      author,
     })
     const chosen = parseCategories(categories)
     const enrichment = await enrichItem(item, {
@@ -768,6 +824,36 @@ router.patch('/:id/engage', async (req, res) => {
     .update({ last_engaged_at: new Date().toISOString() })
     .eq('id', id)
     .select()
+    .single()
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.json(data)
+})
+
+// Read and archived state, as timestamps rather than flags — "when did I read
+// this" stays answerable later without another migration.
+//
+// Kept off PATCH /:id deliberately: that route re-embeds in the background
+// after every write, which is the right thing when the text changed and pure
+// waste for a toggle that doesn't touch a single searchable field.
+router.patch('/:id/status', async (req, res) => {
+  const { read, archived } = req.body
+  const updates = {}
+  const now = new Date().toISOString()
+
+  if (read !== undefined) updates.read_at = read ? now : null
+  if (archived !== undefined) updates.archived_at = archived ? now : null
+
+  if (!Object.keys(updates).length) {
+    return res.status(400).json({ error: 'Pass read and/or archived' })
+  }
+
+  const { data, error } = await supabase
+    .from('items')
+    .update(updates)
+    .eq('id', req.params.id)
+    .eq('user_id', process.env.DEFAULT_USER_ID)
+    .select('id, read_at, archived_at')
     .single()
 
   if (error) return res.status(500).json({ error: error.message })

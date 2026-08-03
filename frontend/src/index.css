@@ -71,3 +71,126 @@ body {
 .note-editor u {
   @apply underline;
 }
+
+/* The reading surface on an item's detail page.
+   Larger type, a taller line box and real paragraph spacing — this body is
+   meant to be read end to end, where .note-body alone is tuned for skimming a
+   saved note. Layered on top of .note-body rather than replacing it, so lists,
+   links and images keep the styling they already have.
+
+   The measurements are set for a fifteen-minute article, not a preview: 17px
+   at 1.8 with a paragraph gap wide enough that the eye finds the next line
+   without hunting. */
+.reading-body {
+  @apply text-[17px] leading-[1.8] tracking-[-0.003em];
+}
+
+.reading-body p {
+  @apply my-5;
+}
+
+/* Headings need far more space above than below — the gap is what tells you a
+   new section started, and splitting it evenly leaves the heading floating
+   between two blocks that both look like its body. */
+.reading-body h1 {
+  @apply mb-3 mt-10 text-[24px] font-semibold leading-snug;
+}
+
+.reading-body h2 {
+  @apply mb-2.5 mt-9 text-[20px] font-semibold leading-snug;
+}
+
+.reading-body h3 {
+  @apply mb-2 mt-7 text-[18px] font-semibold leading-snug;
+}
+
+.reading-body ul,
+.reading-body ol {
+  @apply my-5 space-y-2 pl-6;
+}
+
+.reading-body li {
+  @apply pl-1 leading-[1.75];
+}
+
+.reading-body blockquote {
+  @apply my-7 border-l-[3px] border-primary/30 py-1 pl-5 text-[17px] italic text-text-primary/90;
+}
+
+.reading-body img {
+  @apply my-7 cursor-zoom-in rounded-2xl ring-1 ring-border-subtle transition-shadow duration-200;
+}
+
+.reading-body img:hover {
+  @apply shadow-card-hover;
+}
+
+.reading-body pre {
+  @apply my-5 overflow-x-auto rounded-xl bg-muted p-4 text-[13px] leading-relaxed;
+}
+
+.reading-body hr {
+  @apply my-8 border-border-subtle;
+}
+
+/* Two paragraphs in a row need the gap; a paragraph opening the article or
+   closing it doesn't, or the card gains dead space at both ends. */
+.reading-body > *:first-child {
+  @apply mt-0;
+}
+
+.reading-body > *:last-child {
+  @apply mb-0;
+}
+
+/* display:block is what makes a wide table scroll inside the column instead
+   of pushing the whole page sideways. */
+.reading-body table {
+  @apply my-4 block w-full overflow-x-auto text-[14px];
+}
+
+.reading-body th,
+.reading-body td {
+  @apply border border-border-subtle px-2.5 py-1.5 text-left align-top;
+}
+
+.reading-body th {
+  @apply bg-muted font-semibold;
+}
+
+.reading-body a {
+  @apply text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary;
+}
+
+.reading-body ::selection {
+  @apply bg-primary/20;
+}
+
+/* Annotated spans are clickable, and nothing else about them says so. */
+.pmv-annotation {
+  @apply cursor-pointer;
+}
+
+/* A highlight with a note attached carries a small marker, so the page shows
+   where you actually said something rather than only where you painted.
+   A masked SVG rather than an emoji: it inherits the palette, stays crisp, and
+   doesn't change shape between platforms. */
+.pmv-noted::after {
+  content: '';
+  display: inline-block;
+  width: 0.72em;
+  height: 0.72em;
+  margin-left: 0.15em;
+  vertical-align: 0.42em;
+  background-color: #6366f1;
+  -webkit-mask-image: var(--pmv-note-icon);
+  mask-image: var(--pmv-note-icon);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+:root {
+  --pmv-note-icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/></svg>");
+}

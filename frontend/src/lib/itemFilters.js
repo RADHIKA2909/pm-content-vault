@@ -33,6 +33,24 @@ export const DUPLICATE_FILTERS = [
   { value: 'hide', label: 'Hide duplicates' },
 ]
 
+// Archived items are out of the Library by default — that's what archiving is
+// for. This is the way back to them without having to remember which ones you
+// put away.
+export const ARCHIVED_FILTERS = [
+  { value: '', label: 'Hide archived' },
+  { value: 'include', label: 'Include archived' },
+  { value: 'only', label: 'Archived only' },
+]
+
+// Applied before search and the rest of the filters, because it decides what
+// counts as being in the Library at all — the "N items" total has to agree
+// with it.
+export function scopeByArchived(items, archived) {
+  if (archived === 'only') return items.filter((i) => i.archived_at)
+  if (archived === 'include') return items
+  return items.filter((i) => !i.archived_at)
+}
+
 export const SORTS = [
   { value: 'newest', label: 'Newest first' },
   { value: 'oldest', label: 'Oldest first' },
@@ -40,10 +58,10 @@ export const SORTS = [
   { value: 'za', label: 'Title Z–A' },
 ]
 
-export const DEFAULT_FILTERS = { source: '', date: '', duplicates: '', favoritesOnly: false }
+export const DEFAULT_FILTERS = { source: '', date: '', duplicates: '', archived: '', favoritesOnly: false }
 
 export const activeFilterCount = (f) =>
-  [f.source, f.date, f.duplicates].filter(Boolean).length + (f.favoritesOnly ? 1 : 0)
+  [f.source, f.date, f.duplicates, f.archived].filter(Boolean).length + (f.favoritesOnly ? 1 : 0)
 
 const isFavorite = (item) => Boolean(item.tags?.some((t) => t.tag === FAVORITE_TAG))
 
