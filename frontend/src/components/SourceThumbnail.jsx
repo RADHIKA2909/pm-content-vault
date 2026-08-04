@@ -6,17 +6,23 @@ import {
   Image as ImageIcon,
   Link as LinkIcon,
   Linkedin,
-  MessageCircle,
   NotebookPen,
-  Type,
 } from 'lucide-react'
+import WhatsappMark from './WhatsappMark.jsx'
 
+// The small-tile counterpart to the Library card heroes. It stays icon-led —
+// at 56–86px a generated cover or a page render is an unreadable smudge — but
+// it has to agree with the big cards about *what an item is*.
 const TILE_CONFIG = {
-  text: { Icon: Type, bg: 'bg-muted', fg: 'text-text-secondary' },
+  // Same tile as `note`: the two input types merged, so a pasted item and a
+  // written one are one thing everywhere else and must not split here.
+  text: { Icon: NotebookPen, bg: 'bg-accent-light', fg: 'text-accent' },
   question: { Icon: HelpCircle, bg: 'bg-primary-light', fg: 'text-primary' },
   job: { Icon: Briefcase, bg: 'bg-secondary/10', fg: 'text-secondary' },
   linkedin_paste: { Icon: Linkedin, bg: 'bg-primary-light', fg: 'text-primary' },
-  whatsapp_export: { Icon: MessageCircle, bg: 'bg-success/10', fg: 'text-success' },
+  // The real mark, not lucide's generic bubble — the point of this tile is
+  // knowing the item came out of a chat export without reading a word.
+  whatsapp_export: { Mark: WhatsappMark, bg: 'bg-[#25D366]/10', fg: 'fill-[#25D366]' },
   pdf: { Icon: FileText, bg: 'bg-warning/10', fg: 'text-warning' },
   image: { Icon: ImageIcon, bg: 'bg-secondary/10', fg: 'text-secondary' },
   link: { Icon: LinkIcon, bg: 'bg-muted', fg: 'text-text-secondary' },
@@ -61,11 +67,11 @@ function SourceThumbnail({ item }) {
       ? TILE_CONFIG.linkedin_paste
       : TILE_CONFIG[item.source_type] || TILE_CONFIG.link
 
-  const { Icon, bg, fg } = config
+  const { Icon, Mark, bg, fg } = config
 
   return (
     <div className={`flex h-full w-full items-center justify-center ${bg}`}>
-      <Icon className={`h-8 w-8 ${fg}`} strokeWidth={1.5} />
+      {Mark ? <Mark className={`h-7 w-7 ${fg}`} /> : <Icon className={`h-8 w-8 ${fg}`} strokeWidth={1.5} />}
     </div>
   )
 }

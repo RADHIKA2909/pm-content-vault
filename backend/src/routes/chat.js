@@ -39,7 +39,7 @@ router.get('/sessions', async (req, res) => {
 router.get('/sessions/:id', async (req, res) => {
   const { data, error } = await supabase
     .from('chat_queries')
-    .select('id, query_text, answer_text, answer_sections, cited_item_ids, created_at')
+    .select('id, query_text, answer_text, answer_sections, cited_item_ids, citations, created_at')
     .eq('user_id', req.userId)
     .eq('session_id', req.params.id)
     .order('created_at', { ascending: true })
@@ -292,6 +292,18 @@ router.post('/', async (req, res) => {
       answer_text: [sections.overview, sections.body].filter(Boolean).join('\n\n'),
       answer_sections: sections,
       cited_item_ids: itemIds,
+      // The ids alone can't be rehydrated faithfully: `index` is the item's
+      // position in the retrieved set, which is what the answer's [n] markers
+      // refer to, and `chunk_text` is the passage the answer actually used.
+      // Both are unrecoverable from the item row afterwards. The item itself
+      // is deliberately not stored — it can be edited or deleted, and a stale
+      // copy would be worse than looking it up.
+      citations: citations.map((c) => ({
+        index: c.index,
+        item_id: c.item?.id ?? null,
+        chunk_text: c.chunk_text,
+        similarity: c.similarity,
+      })),
     })
 
     if (saveError) console.error('Chat turn was not saved:', saveError.message)

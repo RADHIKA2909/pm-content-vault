@@ -1,0 +1,19 @@
+-- Citations kept whole, not just as a set of item ids.
+--
+-- An answer's inline markers are numbered by an item's position in the
+-- *retrieved* set, so a turn that only cites the fourth match legitimately
+-- reads "[4]". `cited_item_ids` stores ids and nothing else, so reopening that
+-- conversation had to invent numbering — it renumbered from 1 and the text
+-- said [4] beside a source card labelled 1.
+--
+-- It also dropped the retrieved passage. SourceCard exists to show the exact
+-- text an answer leaned on; on a restored turn that was substituted with the
+-- item's summary, which is a different sentence written for a different
+-- purpose. A citation you can't check is the thing this app is supposed not to
+-- produce.
+--
+-- Shape: [{ "index": 4, "item_id": "uuid", "chunk_text": "...", "similarity": 0.83 }]
+--
+-- Nullable, and `cited_item_ids` stays populated: turns saved before this have
+-- no value, and the dashboard's related-items lookup still reads the id array.
+alter table chat_queries add column if not exists citations jsonb;

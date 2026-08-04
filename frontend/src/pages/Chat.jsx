@@ -39,9 +39,32 @@ const QUICK_ACTIONS = [
   },
 ]
 
-// Stored turns only keep the cited item ids, so the sources are rebuilt from
-// the current library. An item deleted since is simply dropped.
-function hydrateCitations(citedItemIds, allItems) {
+/**
+ * Rebuild a stored turn's sources against the current library.
+ *
+ * The item itself is looked up live rather than stored, so an edited title or
+ * summary shows its current form and a deleted item simply drops out.
+ *
+ * `citations` keeps the two things that can't be recovered from the item row:
+ * the index the answer's [n] markers refer to — which counts position in the
+ * retrieved set, not position in this list — and the passage the answer
+ * actually used. Renumbering from 1 here is what made a reopened answer say
+ * "[4]" beside a card labelled 1.
+ *
+ * Turns saved before that column existed fall back to the old behaviour. It's
+ * still wrong for them, but the information to do better was never recorded,
+ * and inventing it would be worse than being consistently approximate.
+ */
+function hydrateCitations(citations, citedItemIds, allItems) {
+  if (Array.isArray(citations) && citations.length) {
+    return citations
+      .map((c) => {
+        const item = allItems.find((it) => it.id === c.item_id)
+        return item ? { index: c.index, item, chunk_text: c.chunk_text || item.summary || '' } : null
+      })
+      .filter(Boolean)
+  }
+
   return (citedItemIds || [])
     .map((id, i) => {
       const item = allItems.find((it) => it.id === id)
@@ -118,7 +141,7 @@ function Chat() {
           {
             role: 'assistant',
             sections: sectionsFromTurn(t),
-            citations: hydrateCitations(t.cited_item_ids, allItems),
+            citations: hydrateCitations(t.citations, t.cited_item_ids, allItems),
           },
         ]),
       )

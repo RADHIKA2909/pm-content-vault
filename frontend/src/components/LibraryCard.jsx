@@ -124,16 +124,25 @@ const LibraryCard = forwardRef(function LibraryCard(
   // "Website · 5 min read", "PDF · 12 pages", "My note · 240 words" — each
   // entry omitted when the item has no value for it, so nothing ever reads
   // "0 pages".
-  const meta = (
+  // Separators trail their entry rather than lead the next one. These rows
+  // wrap on narrow cards, and a leading separator becomes a line that starts
+  // "· Saved 4h ago", which reads as a typo. Trailing means a wrap can only
+  // ever leave one at the end of a line, where it looks like continuation.
+  //
+  // `trailing` extends that across the boundary into the footer, which is a
+  // sibling element and would otherwise supply its own leading separator.
+  const renderMeta = (trailing = false) => (
     <span className="flex min-w-0 items-center gap-1.5 text-caption text-text-secondary">
       {card.meta.map((entry, i) => (
         <span key={entry} className="flex min-w-0 items-center gap-1.5">
-          {i > 0 && <span aria-hidden="true">·</span>}
           <span className="truncate">{entry}</span>
+          {(trailing || i < card.meta.length - 1) && <span aria-hidden="true">·</span>}
         </span>
       ))}
     </span>
   )
+
+  const meta = renderMeta()
 
   const FOOTER_ICON = { highlight: Highlighter, deadline: Clock, saved: Clock }
 
@@ -166,10 +175,12 @@ const LibraryCard = forwardRef(function LibraryCard(
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-medium text-text-primary">{headline}</p>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-            {meta}
+            {/* The separator between meta and footer is emitted by the meta
+                group as a trailing mark, so wrapping can't push it onto the
+                front of the footer's line. */}
+            {renderMeta(card.meta.length > 0 && footer.length > 0)}
             {footer.map(({ text }) => (
               <span key={text} className="flex items-center gap-2 text-caption text-text-secondary">
-                <span aria-hidden="true">·</span>
                 {text}
               </span>
             ))}
