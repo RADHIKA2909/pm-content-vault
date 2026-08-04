@@ -140,7 +140,10 @@ router.get('/stats', async (req, res) => {
 
   res.json({
     items: rows.length,
-    notes: rows.filter((i) => i.source_type === 'note').length,
+    // `text` counts as a note: the two input types merged, and the Library
+    // badges both "Note". Counting only one of them reported fewer notes than
+    // the user can see on screen.
+    notes: rows.filter((i) => i.source_type === 'note' || i.source_type === 'text').length,
     highlights: highlights || 0,
     categories: new Set(rows.map((i) => i.category).filter(Boolean)).size,
   })

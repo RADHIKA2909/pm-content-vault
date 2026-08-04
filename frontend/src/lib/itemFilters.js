@@ -14,8 +14,11 @@ export const SOURCE_FILTERS = [
   { value: 'link', label: 'Web link', match: (i) => i.source_type === 'link' && i.link_type !== 'linkedin' },
   { value: 'pdf', label: 'PDF', match: (i) => i.source_type === 'pdf' },
   { value: 'image', label: 'Image', match: (i) => i.source_type === 'image' },
-  { value: 'note', label: 'My notes', match: (i) => i.source_type === 'note' },
-  { value: 'text', label: 'Pasted text', match: (i) => i.source_type === 'text' },
+  // One entry, because Note and "Paste text" merged into a single input type.
+  // `text` rows predate that merge and are shown as notes everywhere else, so
+  // a separate filter here would hide half of what the user thinks of as their
+  // notes depending on which option they picked.
+  { value: 'note', label: 'My notes', match: (i) => i.source_type === 'note' || i.source_type === 'text' },
   { value: 'whatsapp_export', label: 'WhatsApp', match: (i) => i.source_type === 'whatsapp_export' },
 ]
 

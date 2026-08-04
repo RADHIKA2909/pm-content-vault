@@ -45,7 +45,10 @@ import { structuredTextToHtml } from '../lib/contentHtml.js'
 import { linkTarget } from '../lib/preferences.js'
 
 const SOURCE_TYPE_LABEL = {
-  text: 'Pasted text',
+  // Same label as `note`. These rows predate the merge of the two input types,
+  // and the Library card calls them notes — labelling the same item "Pasted
+  // text" here contradicted the card the user clicked to get here.
+  text: 'My own note',
   question: 'Interview question',
   job: 'Job posting',
   link: 'Saved link',

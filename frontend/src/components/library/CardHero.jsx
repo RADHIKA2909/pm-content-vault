@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Briefcase, FileText, HelpCircle, Linkedin, NotebookPen, Type } from 'lucide-react'
+import { Briefcase, FileText, HelpCircle, Linkedin, NotebookPen } from 'lucide-react'
 import { monogramTone } from '../../lib/cardIntel.js'
 
 /**
@@ -164,10 +164,6 @@ function CardHero({ item, descriptor }) {
 
   if (kind === 'linkedin') {
     return <Artwork src={item.thumbnail_url || item.file_url} seed={item.author || 'LinkedIn'} label={item.author} Icon={Linkedin} />
-  }
-
-  if (kind === 'text') {
-    return <Monogram seed={title} Icon={Type} />
   }
 
   // article — the page's own og:image when the fetch found one, otherwise a
