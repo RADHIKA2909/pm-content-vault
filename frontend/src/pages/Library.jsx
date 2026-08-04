@@ -404,7 +404,16 @@ function Library() {
         </div>
       )}
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Content" size="xl">
+      {/* An in-progress add is unsaved work: it survives a close, and the
+          ✕ is the only way out. */}
+      <Modal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        title="Add Content"
+        size="xl"
+        dismissible={false}
+        keepMounted
+      >
         <AddContentFlow
           // Already on Library — refetch in place and flag the new item rather
           // than navigating to the page we're standing on.

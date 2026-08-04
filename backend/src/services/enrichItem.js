@@ -43,10 +43,13 @@ export async function enrichItem(item, { skipSummary = false, category: category
       // Surface this instead of silently saving a summary-less item — the
       // user explicitly asked for a summary, so they should know why it's
       // missing (usually a quota limit).
-      warning =
-        err.name === 'QuotaExceededError'
-          ? "Saved, but couldn't generate the AI summary — today's AI limit has been reached."
-          : "Saved, but the AI summary couldn't be generated."
+      if (err.name === 'QuotaExceededError') {
+        warning = "Saved, but couldn't generate the AI summary — today's AI limit has been reached."
+      } else if (err.name === 'ServiceBusyError') {
+        warning = 'Saved, but the AI service was busy — the summary can be regenerated in a moment.'
+      } else {
+        warning = "Saved, but the AI summary couldn't be generated."
+      }
     }
   }
 

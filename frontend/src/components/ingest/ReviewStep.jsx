@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertCircle, AlertTriangle, Check, Info, Pencil, Sparkles, WandSparkles } from 'lucide-react'
+import { AlertCircle, AlertTriangle, Check, ExternalLink, Info, Pencil, Sparkles, WandSparkles } from 'lucide-react'
 import CategoryPicker from '../CategoryPicker.jsx'
 import { CategoryChip } from '../Chip.jsx'
 import SuggestionField from './SuggestionField.jsx'
@@ -14,7 +14,7 @@ import { inputClass } from './inputs/SimpleInputs.jsx'
  * hover, and only that section becomes editable when clicked. Opening as a wall
  * of inputs framed the AI's work as a draft to be corrected.
  */
-function ReviewStep({ draft, value, onChange, onOpenDuplicate }) {
+function ReviewStep({ draft, value, onChange }) {
   const [editingCategories, setEditingCategories] = useState(false)
   const set = (patch) => onChange({ ...value, ...patch })
   const { suggestions, duplicate, aiWarning } = draft
@@ -53,12 +53,21 @@ function ReviewStep({ draft, value, onChange, onOpenDuplicate }) {
                 {/* A real pgvector cosine score, not an estimate. */}
                 Saved {savedAgoLong(duplicate.created_at)} · {Math.round(duplicate.similarity * 100)}% similar
               </p>
-              <button
-                onClick={() => onOpenDuplicate(duplicate.id)}
+              {/* A new tab, and a real anchor rather than a click handler.
+                  Navigating this tab tore down the modal and took the
+                  half-finished add with it — the one moment you're most likely
+                  to want a second look is the one where losing your work costs
+                  most. The anchor also makes middle-click and "open in new
+                  tab" behave, and rel is mandatory alongside target=_blank. */}
+              <a
+                href={`/library/${duplicate.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-surface px-2.5 py-1.5 text-caption font-medium text-text-primary shadow-card ring-1 ring-border-subtle transition-colors duration-150 hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 View existing
-              </button>
+                <ExternalLink className="h-3 w-3" strokeWidth={2} />
+              </a>
             </div>
           </div>
         </div>

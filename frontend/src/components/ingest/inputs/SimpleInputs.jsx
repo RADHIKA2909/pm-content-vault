@@ -28,39 +28,23 @@ export function Field({ label, optional, children }) {
 export const inputClass =
   'w-full rounded-xl bg-surface px-3 py-2.5 text-body text-text-primary shadow-card ring-1 ring-border-subtle transition-all duration-200 placeholder:text-text-secondary hover:ring-text-secondary/30 focus:shadow-[0_0_0_4px_rgba(99,102,241,0.12)] focus:outline-none focus:ring-2 focus:ring-primary'
 
+// Covers both writing and pasting since the two merged. There is no separate
+// "add your thoughts" box here on purpose: in a note, the thought is the
+// content, and a second field would only ask where a given sentence belongs.
 export const NoteInput = forwardRef(function NoteInput(_props, ref) {
   return (
-    <Panel title="Write a note" hint="Your own thinking — format it, paste images, drop in links.">
-      <RichTextEditor ref={ref} placeholder="Today's learning..." minHeight="min-h-[240px]" />
+    <Panel
+      title="Write or paste"
+      hint="Your own thinking, or anything you want to keep — format it, paste images, drop in links."
+    >
+      <RichTextEditor
+        ref={ref}
+        placeholder="Today's learning, or paste a post, an article, a transcript..."
+        minHeight="min-h-[240px]"
+      />
     </Panel>
   )
 })
-
-export function TextInput({ value, onChange, notes, onNotesChange }) {
-  return (
-    <Panel title="Paste your content" hint="A post, an article, a transcript — anything you want to keep.">
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={9}
-        autoFocus
-        placeholder="Paste the content here..."
-        className={`${inputClass} resize-y leading-relaxed`}
-      />
-      <div className="mt-3">
-        <Field label="Add your thoughts (optional)">
-          <textarea
-            value={notes}
-            onChange={(e) => onNotesChange(e.target.value)}
-            rows={2}
-            placeholder="Why this matters to you..."
-            className={`${inputClass} resize-y`}
-          />
-        </Field>
-      </div>
-    </Panel>
-  )
-}
 
 export function QuestionInput({ value, onChange, notes, onNotesChange }) {
   return (

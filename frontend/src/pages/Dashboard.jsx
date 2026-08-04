@@ -261,7 +261,16 @@ function Dashboard() {
         </>
       )}
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Content" size="xl">
+      {/* An in-progress add is unsaved work: it survives a close, and the
+          ✕ is the only way out. */}
+      <Modal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        title="Add Content"
+        size="xl"
+        dismissible={false}
+        keepMounted
+      >
         <AddContentFlow
           onSaved={fetchAll}
           onNavigate={(to) => {

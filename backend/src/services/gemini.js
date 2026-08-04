@@ -6,6 +6,32 @@ export const EMBEDDING_DIMENSIONS = 768
 // requests/day and gets exhausted almost immediately by any backfill).
 const TEXT_MODEL = 'gemini-flash-lite-latest'
 
+// Tried in order when the primary is overloaded or out of quota. Google runs
+// each model as its own capacity pool with its own free-tier allowance, so a
+// 503 on flash-lite says nothing about flash — on 2026-08-04 flash-lite
+// returned 503 on five consecutive calls while both of these answered 200.
+// Sticking to one model turns somebody else's traffic spike into "the AI
+// couldn't read your content".
+//
+// Another lite model comes first for the reason flash-lite is primary at all:
+// full flash allows ~20 requests/day on the free tier, so putting it first
+// would trade a short outage for an exhausted daily quota. It stays last as
+// the genuine last resort.
+const FALLBACK_MODELS = ['gemini-3.1-flash-lite', 'gemini-flash-latest']
+
+// Retried rather than surfaced: the request was well-formed and the same call
+// usually succeeds moments later. A 400 or 404 is our bug and fails fast.
+const TRANSIENT_STATUSES = new Set([500, 502, 503, 504])
+
+// Two quick attempts per model. The user is watching a progress step while
+// this runs, so the ceiling matters as much as the resilience — three models
+// at two tries each is a worst case of roughly five seconds before we give up
+// and hand them an editable form.
+const ATTEMPTS_PER_MODEL = 2
+const BACKOFF_MS = [400, 1200]
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
 // Thrown when Gemini refuses due to quota so callers can tell the user
 // "you hit today's limit" instead of silently producing no summary.
 export class QuotaExceededError extends Error {
@@ -15,19 +41,83 @@ export class QuotaExceededError extends Error {
   }
 }
 
-async function callGemini(model, body) {
-  const res = await fetch(`${GEMINI_BASE}/${model}:generateContent?key=${requireApiKey()}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
+// Thrown when every model was reachable but busy. Distinct from
+// QuotaExceededError because the advice differs: waiting a moment fixes this,
+// waiting until tomorrow fixes that.
+export class ServiceBusyError extends Error {
+  constructor() {
+    super('the AI service is busy right now')
+    this.name = 'ServiceBusyError'
+  }
+}
 
-  if (res.status === 429) throw new QuotaExceededError()
-  if (!res.ok) {
-    throw new Error(`Gemini generateContent failed: ${res.status} ${await res.text()}`)
+/**
+ * One generateContent call, tried across models until one answers.
+ *
+ * Every failure is logged. The previous version swallowed the status entirely,
+ * so a sustained upstream outage looked identical to unreadable content and
+ * left no trace anywhere to tell them apart.
+ */
+async function callGemini(model, body) {
+  const key = requireApiKey()
+  const chain = [model, ...FALLBACK_MODELS.filter((m) => m !== model)]
+  let sawQuota = false
+  let sawTransient = false
+  let lastError = null
+
+  for (const candidate of chain) {
+    for (let attempt = 0; attempt < ATTEMPTS_PER_MODEL; attempt += 1) {
+      let res
+      try {
+        res = await fetch(`${GEMINI_BASE}/${candidate}:generateContent?key=${key}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+      } catch (err) {
+        // DNS, TLS, socket — same shape of problem as a 503.
+        sawTransient = true
+        lastError = err
+        console.warn(`Gemini ${candidate}: ${err.message}`)
+        await sleep(BACKOFF_MS[attempt])
+        continue
+      }
+
+      if (res.ok) {
+        if (candidate !== model) console.warn(`Gemini fell back to ${candidate} (${model} was unavailable)`)
+        return res.json()
+      }
+
+      const detail = (await res.text()).slice(0, 300)
+
+      // Per-model, per-day on the free tier, so another model may well have
+      // room. Retrying this one within the same request would not.
+      if (res.status === 429) {
+        sawQuota = true
+        console.warn(`Gemini ${candidate}: 429 quota exhausted`)
+        break
+      }
+
+      if (TRANSIENT_STATUSES.has(res.status)) {
+        sawTransient = true
+        lastError = new Error(`Gemini ${candidate} failed: ${res.status} ${detail}`)
+        console.warn(`Gemini ${candidate}: ${res.status}, attempt ${attempt + 1}/${ATTEMPTS_PER_MODEL}`)
+        await sleep(BACKOFF_MS[attempt])
+        continue
+      }
+
+      // A malformed request or a model this key can't reach. Trying the same
+      // thing twice more would only slow the failure down.
+      console.error(`Gemini ${candidate}: ${res.status} ${detail}`)
+      throw new Error(`Gemini generateContent failed: ${res.status} ${detail}`)
+    }
   }
 
-  return res.json()
+  // Quota wins when both happened: "you're out until tomorrow" is the more
+  // actionable of the two, and a busy model doesn't restore the allowance.
+  if (sawQuota) throw new QuotaExceededError()
+  if (sawTransient) throw new ServiceBusyError()
+  throw lastError || new Error('Gemini generateContent failed')
 }
 
 // Fixed taxonomy from CLAUDE.md — do not let the model invent new categories.
@@ -107,24 +197,58 @@ ${text}
   }
 }
 
+/**
+ * Embeddings get the same retry as generation, and for a sharper reason: an
+ * item saved without one is invisible to Ask My Vault and skips the duplicate
+ * check, with nothing on the card to say so. A summary that failed is at least
+ * visibly missing.
+ *
+ * No model fallback here — gemini-embedding-001 is the only embedding model,
+ * and vectors from a different one would not be comparable to the 15 already
+ * in pgvector even if there were an alternative.
+ */
 export async function embedText(text) {
   const key = requireApiKey()
+  let lastError = null
 
-  const res = await fetch(`${GEMINI_BASE}/gemini-embedding-001:embedContent?key=${key}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      content: { parts: [{ text }] },
-      outputDimensionality: EMBEDDING_DIMENSIONS,
-    }),
-  })
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    let res
+    try {
+      res = await fetch(`${GEMINI_BASE}/gemini-embedding-001:embedContent?key=${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: { parts: [{ text }] },
+          outputDimensionality: EMBEDDING_DIMENSIONS,
+        }),
+      })
+    } catch (err) {
+      lastError = err
+      console.warn(`Gemini embedding: ${err.message}, attempt ${attempt + 1}/3`)
+      await sleep(BACKOFF_MS[Math.min(attempt, BACKOFF_MS.length - 1)])
+      continue
+    }
 
-  if (!res.ok) {
-    throw new Error(`Gemini embedContent failed: ${res.status} ${await res.text()}`)
+    if (res.ok) {
+      const data = await res.json()
+      return data.embedding?.values ?? null
+    }
+
+    const detail = (await res.text()).slice(0, 300)
+    if (res.status === 429) throw new QuotaExceededError()
+
+    if (TRANSIENT_STATUSES.has(res.status)) {
+      lastError = new Error(`Gemini embedContent failed: ${res.status} ${detail}`)
+      console.warn(`Gemini embedding: ${res.status}, attempt ${attempt + 1}/3`)
+      await sleep(BACKOFF_MS[Math.min(attempt, BACKOFF_MS.length - 1)])
+      continue
+    }
+
+    console.error(`Gemini embedding: ${res.status} ${detail}`)
+    throw new Error(`Gemini embedContent failed: ${res.status} ${detail}`)
   }
 
-  const data = await res.json()
-  return data.embedding?.values ?? null
+  throw lastError || new ServiceBusyError()
 }
 
 // Keeps the prompt from ballooning as the vault grows — the index is a

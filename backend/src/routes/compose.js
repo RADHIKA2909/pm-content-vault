@@ -200,10 +200,21 @@ router.post('/analyze', upload.fields([{ name: 'file', maxCount: 1 }]), async (r
         }
         send('phase', { phase: 'understand', status: 'done' })
       } catch (err) {
-        aiWarning =
-          err.name === 'QuotaExceededError'
-            ? "Today's AI limit has been reached, so there are no suggestions to review — you can still fill these in and save."
-            : "The AI couldn't read this one — you can still fill these in and save."
+        // Logged as well as shown: the previous version reported this to the
+        // user and kept no record, so "it keeps failing" was unanswerable
+        // without reproducing it by hand.
+        console.error(`Categorization failed (${kind}):`, err.name, err.message)
+        if (err.name === 'QuotaExceededError') {
+          aiWarning =
+            "Today's AI limit has been reached, so there are no suggestions to review — you can still fill these in and save."
+        } else if (err.name === 'ServiceBusyError') {
+          // Not the content's fault. Saying "couldn't read this one" sends the
+          // user off editing perfectly good input when the fix is to retry.
+          aiWarning =
+            'The AI service is busy right now, so there are no suggestions yet — try again in a moment, or fill these in and save.'
+        } else {
+          aiWarning = "The AI couldn't read this one — you can still fill these in and save."
+        }
         send('phase', { phase: 'understand', status: 'failed' })
       }
     }
@@ -306,6 +317,9 @@ router.post('/commit', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'th
       apply_url: req.body.applyUrl?.trim() || null,
       salary: req.body.salary?.trim() || null,
       deadline: req.body.deadline?.trim() || null,
+      // pdf-parse counted these pages during /analyze and the value was
+      // discarded until now. Null for every other kind.
+      page_count: meta.pageCount || null,
     })
 
     if (categories.length) {

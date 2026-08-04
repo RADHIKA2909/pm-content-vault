@@ -1,5 +1,13 @@
 import supabase from './supabaseClient.js'
 
+// Counted once at save rather than per render: the list endpoint doesn't
+// return extracted_text, and shipping the full text of every article to the
+// browser so it can count words for a "5 min read" label would be absurd.
+export const countWords = (text) => {
+  const clean = (text || '').trim()
+  return clean ? clean.split(/\s+/).length : null
+}
+
 // `fields` carries anything the caller has already decided — the reviewed
 // title/summary/key points from the guided Add Content flow, or the structured
 // columns a job posting fills in. Passed straight through so a reviewed item is
@@ -26,6 +34,7 @@ export async function insertItem({
       thumbnail_url: thumbnailUrl || null,
       link_type: linkType || null,
       notes: notes?.trim() || null,
+      word_count: countWords(extractedText),
       ...fields,
     })
     .select()
@@ -45,6 +54,7 @@ export async function insertItems(rows, userId) {
         raw_content: row.rawContent,
         extracted_text: row.extractedText,
         notes: row.notes?.trim() || null,
+        word_count: countWords(row.extractedText),
       })),
     )
     .select()

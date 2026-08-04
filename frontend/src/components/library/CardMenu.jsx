@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link2, MessageSquare, MoreHorizontal, SquareArrowOutUpRight, Star, StarOff, Trash2 } from 'lucide-react'
 
 // Overflow menu for a card.
@@ -9,8 +9,10 @@ import { Link2, MessageSquare, MoreHorizontal, SquareArrowOutUpRight, Star, Star
 // is worse than a missing one.
 function CardMenu({ isFavorite, onOpen, onAsk, onCopyLink, onToggleFavorite, onDelete }) {
   const [open, setOpen] = useState(false)
+  const [dropUp, setDropUp] = useState(false)
   const wrapRef = useRef(null)
   const buttonRef = useRef(null)
+  const menuRef = useRef(null)
 
   useEffect(() => {
     if (!open) return
@@ -31,6 +33,38 @@ function CardMenu({ isFavorite, onOpen, onAsk, onCopyLink, onToggleFavorite, onD
       document.removeEventListener('mousedown', onPointerDown)
       document.removeEventListener('keydown', onKeyDown)
     }
+  }, [open])
+
+  // Open upward when there isn't room below.
+  //
+  // The menu lives in the card's footer, so for the last row of the grid
+  // "below" is off the bottom of the page — the menu opened into space that
+  // had to be scrolled to before anything in it could be clicked.
+  //
+  // useLayoutEffect, not useEffect: this runs before the browser paints, so
+  // the menu is already in the right place on its first frame rather than
+  // appearing downward and jumping up.
+  useLayoutEffect(() => {
+    if (!open || !menuRef.current || !buttonRef.current) return
+
+    const button = buttonRef.current.getBoundingClientRect()
+    const menuHeight = menuRef.current.offsetHeight
+    const GAP = 12
+
+    const roomBelow = window.innerHeight - button.bottom
+    const roomAbove = button.top
+
+    // Only flip if flipping actually helps — on a very short viewport neither
+    // side fits, and dropping up would be no better while feeling erratic.
+    setDropUp(roomBelow < menuHeight + GAP && roomAbove > roomBelow)
+  }, [open])
+
+  // A menu anchored to a card that scrolls away shouldn't hang in mid-air.
+  useEffect(() => {
+    if (!open) return
+    const close = () => setOpen(false)
+    window.addEventListener('scroll', close, true)
+    return () => window.removeEventListener('scroll', close, true)
   }, [open])
 
   const items = [
@@ -72,9 +106,12 @@ function CardMenu({ isFavorite, onOpen, onAsk, onCopyLink, onToggleFavorite, onD
 
       {open && (
         <div
+          ref={menuRef}
           role="menu"
           onClick={(e) => e.stopPropagation()}
-          className="absolute right-0 top-full z-30 mt-1 w-52 origin-top-right animate-menuIn overflow-hidden rounded-xl bg-surface p-1 shadow-card-hover ring-1 ring-border-subtle"
+          className={`absolute right-0 z-30 w-52 animate-menuIn overflow-hidden rounded-xl bg-surface p-1 shadow-card-hover ring-1 ring-border-subtle ${
+            dropUp ? 'bottom-full mb-1 origin-bottom-right' : 'top-full mt-1 origin-top-right'
+          }`}
         >
           {items.map(({ key, label, Icon, run, danger }) => (
             <button

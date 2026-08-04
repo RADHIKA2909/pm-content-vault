@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import multer from 'multer'
 import pdfParse from 'pdf-parse'
-import { insertItem, insertItems } from '../services/itemsRepo.js'
+import { insertItem, insertItems, countWords } from '../services/itemsRepo.js'
 import { extractFromUrl, fetchPageImage } from '../services/linkExtractor.js'
 import { parseWhatsappExport } from '../services/whatsappParser.js'
 import { enrichItem } from '../services/enrichItem.js'
@@ -182,7 +182,7 @@ router.get('/', async (req, res) => {
   let query = supabase
     .from('items')
     .select(
-      'id, source_type, raw_content, file_url, thumbnail_url, link_type, notes, title, summary, author, category, subcategory, created_at, last_engaged_at, read_at, archived_at, tags(tag, created_at), item_categories(category, created_at)',
+      'id, source_type, raw_content, file_url, thumbnail_url, link_type, notes, title, summary, author, category, subcategory, created_at, last_engaged_at, read_at, archived_at, page_count, word_count, tags(tag, created_at), item_categories(category, created_at)',
     )
     .eq('user_id', req.userId)
     .order('created_at', { ascending: false })
@@ -194,6 +194,19 @@ router.get('/', async (req, res) => {
 
   const { data, error } = await query
   if (error) return res.status(500).json({ error: error.message })
+
+  // How many highlights sit on each item, so a PDF card can say "23
+  // highlights" instead of another save date. One grouped read rather than a
+  // count per card — the alternative is N requests from the grid.
+  const { data: annotationRows } = await supabase
+    .from('annotations')
+    .select('item_id')
+    .eq('user_id', req.userId)
+
+  const highlightsByItem = new Map()
+  for (const { item_id: itemId } of annotationRows || []) {
+    highlightsByItem.set(itemId, (highlightsByItem.get(itemId) || 0) + 1)
+  }
 
   // Flag items detected as possible duplicates (see enrichItem.js) so the
   // dashboard can show "possible duplicate of X" instead of silently
@@ -216,7 +229,8 @@ router.get('/', async (req, res) => {
     ...(missingOriginals || []).map((item) => [item.id, { title: item.title, summary: item.summary }]),
   ])
 
-  const withDuplicateFlags = data.map((item) => {
+  const withDuplicateFlags = data.map((rawItem) => {
+    const item = { ...rawItem, highlight_count: highlightsByItem.get(rawItem.id) || 0 }
     const dup = duplicateByItemId.get(item.id)
     if (!dup) return item
 
@@ -551,6 +565,7 @@ router.post('/pdf', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'thumb
       fileUrl,
       thumbnailUrl,
       notes,
+      page_count: parsed.numpages || null,
     })
     const chosen = parseCategories(categories)
     const enrichment = await enrichItem(item, {
@@ -644,6 +659,7 @@ router.patch('/:id', async (req, res) => {
 
     updates.formatted_content = safeHtml
     updates.extracted_text = plain
+    updates.word_count = countWords(plain)
   }
 
   // Categories live in their own table, so they're applied separately rather

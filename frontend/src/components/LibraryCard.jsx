@@ -1,14 +1,13 @@
 import { forwardRef } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { ArrowRight, Check } from 'lucide-react'
+import { ArrowRight, Check, Clock, Highlighter, History, Sparkles } from 'lucide-react'
 import { CategoryChip, DuplicateChip } from './Chip.jsx'
-import SourceBadge from './SourceBadge.jsx'
 import SourceThumbnail from './SourceThumbnail.jsx'
+import CardHero from './library/CardHero.jsx'
 import FavoriteButton from './library/FavoriteButton.jsx'
 import CardMenu from './library/CardMenu.jsx'
-import { parseTitle } from '../lib/parseTitle.js'
 import { itemCategories } from '../lib/categories.js'
-import { savedAgo } from '../lib/relativeTime.js'
+import { describeItem } from '../lib/cardIntel.js'
 
 // `onAsk` and `onCopyLink` are optional: Favorites reuses this card and passes
 // only what it supports, and CardMenu drops any entry with no handler.
@@ -41,10 +40,13 @@ const LibraryCard = forwardRef(function LibraryCard(
   },
   ref,
 ) {
-  const { title, subtitle } = parseTitle(item.title)
   const categories = itemCategories(item)
-  const headline = title || item.summary || item.raw_content || 'Untitled'
-  const support = title ? subtitle : null
+  // Everything type-specific — which hero, which badge, which numbers — comes
+  // from one place, so a new content type is an entry in lib/cardIntel.js
+  // rather than another branch scattered through this component.
+  const card = describeItem(item)
+  const headline = card.title
+  const support = card.subtitle
 
   // Framer owns card entrance/exit/reflow now, so there is no CSS entrance
   // class here — two systems animating the same element fight each other.
@@ -119,13 +121,27 @@ const LibraryCard = forwardRef(function LibraryCard(
   // `position` because these are grid/flex items.
   const raised = 'relative has-[[aria-expanded=true]]:z-20'
 
+  // "Website · 5 min read", "PDF · 12 pages", "My note · 240 words" — each
+  // entry omitted when the item has no value for it, so nothing ever reads
+  // "0 pages".
   const meta = (
-    <span className="flex shrink-0 items-center gap-1.5 text-caption text-text-secondary">
-      <SourceBadge sourceType={item.source_type} linkType={item.link_type} />
-      <span aria-hidden="true">·</span>
-      <time dateTime={item.created_at}>{savedAgo(item.created_at)}</time>
+    <span className="flex min-w-0 items-center gap-1.5 text-caption text-text-secondary">
+      {card.meta.map((entry, i) => (
+        <span key={entry} className="flex min-w-0 items-center gap-1.5">
+          {i > 0 && <span aria-hidden="true">·</span>}
+          <span className="truncate">{entry}</span>
+        </span>
+      ))}
     </span>
   )
+
+  const FOOTER_ICON = { highlight: Highlighter, deadline: Clock, saved: Clock }
+
+  // footerNote wins when a page passes one — Favorites relies on that for its
+  // "Starred 4h ago", and it should keep saying that rather than a save date.
+  const footer = footerNote
+    ? [{ icon: 'saved', text: footerNote }]
+    : card.footer
 
   if (view === 'list') {
     return (
@@ -151,12 +167,12 @@ const LibraryCard = forwardRef(function LibraryCard(
           <p className="truncate text-[15px] font-medium text-text-primary">{headline}</p>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
             {meta}
-            {footerNote && (
-              <>
-                <span aria-hidden="true" className="text-text-secondary">·</span>
-                <span className="text-caption text-text-secondary">{footerNote}</span>
-              </>
-            )}
+            {footer.map(({ text }) => (
+              <span key={text} className="flex items-center gap-2 text-caption text-text-secondary">
+                <span aria-hidden="true">·</span>
+                {text}
+              </span>
+            ))}
             {item.duplicateOf && <DuplicateChip similarity={item.duplicateOf.similarity} />}
             {categories.map((category) => (
               <CategoryChip key={category} category={category} />
@@ -189,14 +205,25 @@ const LibraryCard = forwardRef(function LibraryCard(
           the card's bounds. */}
       <div className="relative aspect-[16/10] w-full overflow-hidden rounded-t-2xl bg-muted">
         <div className="h-full w-full transition-[transform,filter] duration-300 group-hover:scale-[1.03] group-hover:brightness-[1.06]">
-          <SourceThumbnail item={item} />
+          <CardHero item={item} descriptor={card} />
         </div>
 
-        {item.duplicateOf && (
-          <span className="absolute left-2 top-2">
-            <DuplicateChip similarity={item.duplicateOf.similarity} />
+        {/* Where it came from, stated on the artwork. For an article that's
+            the domain, which is the fastest way to recognise a saved link. */}
+        <span className="pointer-events-none absolute left-2 top-2 flex items-center gap-1.5">
+          <span className="inline-flex max-w-[150px] items-center gap-1 rounded-lg bg-surface/95 px-2 py-1 text-[11px] font-medium text-text-primary shadow-card backdrop-blur-sm">
+            <span className="truncate">{card.badge}</span>
           </span>
-        )}
+          {card.isNew && (
+            <span
+              title="Saved in the last day"
+              className="inline-flex items-center gap-1 rounded-lg bg-primary px-1.5 py-1 text-[10px] font-semibold text-white shadow-card"
+            >
+              <Sparkles className="h-2.5 w-2.5" strokeWidth={2.5} /> New
+            </span>
+          )}
+        </span>
+
 
         {selectable && <span className="absolute right-2 top-2">{checkbox}</span>}
 
@@ -219,13 +246,17 @@ const LibraryCard = forwardRef(function LibraryCard(
       </div>
 
       <div className="flex flex-1 flex-col p-4">
-        <div className="mb-1.5 flex items-center gap-2">{meta}</div>
+        {card.meta.length > 0 && <div className="mb-1.5 flex items-center gap-2">{meta}</div>}
 
         <p className="truncate text-[15px] font-semibold text-text-primary">{headline}</p>
         {support && <p className="mt-0.5 truncate text-caption text-text-secondary">{support}</p>}
 
-        {categories.length > 0 && (
+        {(categories.length > 0 || item.duplicateOf) && (
           <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {/* Beside the categories rather than on the artwork: it's a label
+                about the item, and every corner of the hero is now spoken for
+                by the type badge, the New pill or a generated cover's title. */}
+            {item.duplicateOf && <DuplicateChip similarity={item.duplicateOf.similarity} />}
             {categories.map((category) => (
               <CategoryChip key={category} category={category} />
             ))}
@@ -247,8 +278,21 @@ const LibraryCard = forwardRef(function LibraryCard(
             {/* Fills the dead space between the star and the menu. Favorites
                 passes "Starred 4h ago"; Library passes nothing and the row
                 looks exactly as it always has. */}
-            {footerNote && (
-              <span className="min-w-0 truncate text-[11px] text-text-secondary">{footerNote}</span>
+            {footer.map(({ icon, text }) => {
+              const Icon = FOOTER_ICON[icon]
+              return (
+                <span key={text} className="flex min-w-0 items-center gap-1 text-[11px] text-text-secondary">
+                  <Icon className="h-3 w-3 shrink-0" strokeWidth={1.75} />
+                  <span className="truncate">{text}</span>
+                </span>
+              )
+            })}
+            {card.revisited && !footerNote && (
+              <History
+                title="You came back to this recently"
+                className="h-3 w-3 shrink-0 text-primary"
+                strokeWidth={1.75}
+              />
             )}
             <span className="ml-auto">
               <CardMenu {...shared} />

@@ -6,14 +6,16 @@ import {
   Link as LinkIcon,
   MessageCircle,
   NotebookPen,
-  Type,
 } from 'lucide-react'
 
 // `kind` is the source_type the item is saved as, so these values are the
 // contract with the backend, not just labels.
 export const INPUT_METHODS = [
-  { kind: 'note', label: 'Note', Icon: NotebookPen, blurb: 'Write your own thoughts' },
-  { kind: 'text', label: 'Paste text', Icon: Type, blurb: 'Drop in any content' },
+  // Note and "Paste text" used to be separate and never justified the split:
+  // the rich editor is a superset of the plain textarea — it already accepts
+  // pasted text, and adds images, links and formatting on top. Two doors to
+  // one room, and both saved something the Library then drew differently.
+  { kind: 'note', label: 'Note / Text', Icon: NotebookPen, blurb: 'Your own thoughts, or paste anything' },
   { kind: 'link', label: 'Link', Icon: LinkIcon, blurb: "Paste a URL and we'll fetch it" },
   { kind: 'image', label: 'Screenshot', Icon: ImageIcon, blurb: 'We read the text in it' },
   { kind: 'pdf', label: 'PDF', Icon: FileText, blurb: 'Upload a document' },

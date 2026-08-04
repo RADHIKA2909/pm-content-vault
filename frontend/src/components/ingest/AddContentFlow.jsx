@@ -5,12 +5,12 @@ import { apiFetch } from '../../lib/apiFetch.js'
 import { analyze, commit } from '../../lib/composeApi.js'
 import { useLocalStorage } from '../../lib/useLocalStorage.js'
 import StepIndicator from './StepIndicator.jsx'
-import InputPicker from './InputPicker.jsx'
+import InputPicker, { INPUT_METHODS } from './InputPicker.jsx'
 import ProcessingStep from './ProcessingStep.jsx'
 import ReviewStep from './ReviewStep.jsx'
 import SavedStep from './SavedStep.jsx'
 import WhatsappInput from './inputs/WhatsappInput.jsx'
-import { NoteInput, TextInput, QuestionInput, JobInput } from './inputs/SimpleInputs.jsx'
+import { NoteInput, QuestionInput, JobInput } from './inputs/SimpleInputs.jsx'
 import { LinkInput, ScreenshotInput, PdfInput } from './inputs/FileInputs.jsx'
 
 const EMPTY_JOB = { role: '', company: '', applyUrl: '', salary: '', deadline: '', notes: '' }
@@ -34,7 +34,13 @@ const readAsText = (file) =>
  */
 function AddContentFlow({ onSaved, onNavigate }) {
   const [step, setStep] = useState('choose')
-  const [kind, setKind] = useLocalStorage('pmv.ingest.kind', 'note')
+  const [storedKind, setKind] = useLocalStorage('pmv.ingest.kind', 'note')
+
+  // A remembered kind can outlive the tab it names — 'text' was folded into
+  // 'note', and anyone whose last add was a paste has it sitting in
+  // localStorage. Without this the picker highlights nothing and the panel
+  // below it renders empty.
+  const kind = INPUT_METHODS.some((m) => m.kind === storedKind) ? storedKind : 'note'
 
   // Per-input state. Kept flat rather than one object per panel so switching
   // tabs doesn't lose what you already typed in another.
@@ -94,7 +100,6 @@ function AddContentFlow({ onSaved, onNavigate }) {
     switch (kind) {
       case 'note':
         return true
-      case 'text':
       case 'question':
         return text.trim().length > 0
       case 'link':
@@ -119,7 +124,7 @@ function AddContentFlow({ onSaved, onNavigate }) {
     if (notes.trim()) form.append('notes', notes.trim())
 
     if (kind === 'note') form.append('html', noteRef.current?.getHtml() || '')
-    if (kind === 'text' || kind === 'question') form.append('text', text)
+    if (kind === 'question') form.append('text', text)
     if (kind === 'link') {
       form.append('url', url.trim())
       form.append('linkType', /linkedin\.com/i.test(url) ? 'linkedin' : 'blog')
@@ -216,7 +221,7 @@ function AddContentFlow({ onSaved, onNavigate }) {
 
       // Re-sent so the draft can be rebuilt if it expired while reviewing.
       if (kind === 'note') form.append('html', noteRef.current?.getHtml() || '')
-      if (kind === 'text' || kind === 'question') form.append('text', text)
+      if (kind === 'question') form.append('text', text)
       if (kind === 'link') {
         form.append('url', url.trim())
         form.append('linkType', /linkedin\.com/i.test(url) ? 'linkedin' : 'blog')
@@ -271,8 +276,6 @@ function AddContentFlow({ onSaved, onNavigate }) {
     switch (kind) {
       case 'note':
         return <NoteInput ref={noteRef} />
-      case 'text':
-        return <TextInput value={text} onChange={setText} notes={notes} onNotesChange={setNotes} />
       case 'question':
         return <QuestionInput value={text} onChange={setText} notes={notes} onNotesChange={setNotes} />
       case 'job':
@@ -399,12 +402,7 @@ function AddContentFlow({ onSaved, onNavigate }) {
           {step === 'processing' && <ProcessingStep phases={phases} />}
 
           {step === 'review' && review && (
-            <ReviewStep
-              draft={draft}
-              value={review}
-              onChange={setReview}
-              onOpenDuplicate={(id) => onNavigate?.(`/library/${id}`)}
-            />
+            <ReviewStep draft={draft} value={review} onChange={setReview} />
           )}
 
           {step === 'saved' && batch && (

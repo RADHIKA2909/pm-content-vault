@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Library, MessageSquare, Star, Settings, Sparkles, Plus } from 'lucide-react'
+import { LayoutDashboard, Library, MessageSquare, Star, Settings, Plus } from 'lucide-react'
+import appIcon from '../assets/app-icon.png'
 import Modal from './Modal.jsx'
 import { useToast } from './ToastContext.jsx'
 import AddContentFlow from './ingest/AddContentFlow.jsx'
@@ -20,9 +21,11 @@ function Sidebar() {
 
   return (
     <aside className="hidden w-24 shrink-0 flex-col items-center border-r border-border-subtle bg-surface py-5 md:flex">
-      <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-hover text-white">
-        <Sparkles className="h-4 w-4" />
-      </div>
+      {/* Same 36px footprint and margin the gradient tile had, so nothing
+          around it shifts. No rounding class: the artwork carries its own
+          rounded corners in its alpha channel, and clipping it again would
+          shave the curve twice. */}
+      <img src={appIcon} alt="PM Content Vault" className="mb-4 h-9 w-9" />
 
       <button
         onClick={() => setAddOpen(true)}
@@ -51,7 +54,16 @@ function Sidebar() {
         ))}
       </nav>
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Content" size="xl">
+      {/* An in-progress add is unsaved work: it survives a close, and the
+          ✕ is the only way out. */}
+      <Modal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        title="Add Content"
+        size="xl"
+        dismissible={false}
+        keepMounted
+      >
         <AddContentFlow
           onSaved={() => showToast('Saved to your vault')}
           onNavigate={(to) => {
