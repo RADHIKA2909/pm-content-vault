@@ -141,6 +141,17 @@ export function describeItem(item) {
     kind,
     badge,
     domain,
+    // Whether the hero will show a real picture rather than something we drew.
+    // Only those need a scrim behind the badges: a saved image or an og:image
+    // often has its own text along the top edge, which collides with the type
+    // badge and reads as one jumbled line. A generated cover, monogram or note
+    // page leaves that corner clear by construction, and dimming it would only
+    // muddy the tint. Kept here because this module already owns every
+    // type-specific decision — CardHero and the card shell agreeing separately
+    // is how the two drift apart.
+    hasArtwork:
+      ['pdf', 'image', 'linkedin', 'article'].includes(kind) &&
+      Boolean(item.thumbnail_url || item.file_url),
     title: title || item.summary || item.raw_content || 'Untitled',
     subtitle: title ? subtitle : null,
     meta,

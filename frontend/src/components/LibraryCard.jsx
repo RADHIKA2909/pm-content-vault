@@ -219,6 +219,16 @@ const LibraryCard = forwardRef(function LibraryCard(
           <CardHero item={item} descriptor={card} />
         </div>
 
+        {/* Sits between the picture and the badges, and outside the wrapper
+            that scales on hover so it stays put while the image zooms under
+            it. Only over real artwork — see descriptor.hasArtwork. */}
+        {card.hasArtwork && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/30 via-black/10 to-transparent"
+          />
+        )}
+
         {/* Where it came from, stated on the artwork. For an article that's
             the domain, which is the fastest way to recognise a saved link. */}
         <span className="pointer-events-none absolute left-2 top-2 flex items-center gap-1.5">
