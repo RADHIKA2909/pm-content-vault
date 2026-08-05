@@ -13,10 +13,28 @@ import ContinueLearning from '../components/dashboard/ContinueLearning.jsx'
 import QuickActions from '../components/dashboard/QuickActions.jsx'
 import RecentSaves from '../components/dashboard/RecentSaves.jsx'
 import CategoryBrowser from '../components/dashboard/CategoryBrowser.jsx'
+import { useAuth } from '../components/auth/AuthProvider.jsx'
 
 // Personalization touch for this single-user v0 tool — swap for a real
 // profile name once Supabase Auth login exists.
-const USER_FIRST_NAME = 'Radhika'
+//
+// That login exists now, so the name comes from the session. Google supplies
+// full_name; an email/password account has none, so the address is used —
+// "demo@pmvault.app" reads better as "Demo" than as the raw string, and better
+// than greeting everybody by whoever built the app.
+function displayName(session) {
+  const meta = session?.user?.user_metadata || {}
+  const named = (meta.full_name || meta.name || '').trim()
+  if (named) return named
+
+  const local = (session?.user?.email || '').split('@')[0]
+  if (!local) return 'there'
+  return local
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part[0].toUpperCase() + part.slice(1))
+    .join(' ')
+}
 
 const WEEK_MS = 7 * 86400000
 
@@ -30,6 +48,7 @@ function greeting() {
 const withinWeek = (iso) => Boolean(iso) && Date.now() - new Date(iso) < WEEK_MS
 
 function Dashboard() {
+  const { session } = useAuth()
   const [items, setItems] = useState([])
   const [chatHistory, setChatHistory] = useState([])
   const [loading, setLoading] = useState(true)
@@ -117,7 +136,7 @@ function Dashboard() {
         <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <h1 className="text-[24px] font-semibold leading-tight tracking-tight text-text-primary sm:text-[30px]">
-              {greeting()}, {USER_FIRST_NAME} <span aria-hidden="true">👋</span>
+              {greeting()}, {displayName(session)} <span aria-hidden="true">👋</span>
             </h1>
             <p className="mt-1 text-body text-text-secondary">
               Your personal PM knowledge hub.

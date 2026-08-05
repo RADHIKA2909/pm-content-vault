@@ -21,7 +21,8 @@
        -webkit-font-smoothing:antialiased}
   .wrap{max-width:var(--max);margin:0 auto;padding:0 22px}
   h1,h2,h3,h4{color:var(--ink);line-height:1.22;margin:0}
-  h1{font:600 clamp(34px,6vw,52px)/1.08 Newsreader,Georgia,serif;letter-spacing:-.02em}
+  h1{font:600 clamp(34px,6vw,52px)/1.1 Newsreader,Georgia,serif;letter-spacing:-.02em;
+     max-width:15ch}
   h2{font:600 clamp(25px,3.4vw,32px)/1.18 Newsreader,Georgia,serif;margin:64px 0 6px;letter-spacing:-.01em}
   h3{font-size:19px;font-weight:600;margin:34px 0 8px}
   h4{font-size:15px;font-weight:600;margin:22px 0 6px}
@@ -45,7 +46,8 @@
 
   /* hero */
   header{padding:64px 0 8px}
-  .kicker{font-size:12.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--brand)}
+  .kicker{font-size:12.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+          color:var(--brand);display:block;margin-bottom:22px}
   .lede{font-size:20px;line-height:1.6;color:var(--body);margin:18px 0 0}
   .meta{display:flex;flex-wrap:wrap;gap:8px 26px;margin:26px 0 0;font-size:14px;color:var(--soft)}
   .meta b{color:var(--ink);font-weight:600}
@@ -125,15 +127,15 @@
 <div class="wrap" id="top">
 
 <header>
-  <div class="kicker">Case study · Solo build · Jul–Aug 2026</div>
+  <span class="kicker">Case study · Solo build</span>
   <h1>The stuff you save to get better at your job, and never look at again.</h1>
-  <p class="lede">PM Content Vault ingests the posts, PDFs, screenshots and chat exports I'd saved
-  across five apps, understands what each one is, and lets me ask questions of the whole pile —
-  with every answer citing the saves it came from.</p>
+  <p class="lede">Everyone saves things they intend to learn from, and almost nobody goes back to
+  them. PM Content Vault takes the posts, PDFs, screenshots and chat exports scattered across five
+  apps, works out what each one is, and lets you ask questions of the whole pile — with every
+  answer citing the saves it came from.</p>
 
   <div class="meta">
     <span><b>Role</b> Product &amp; build, end to end</span>
-    <span><b>Timeline</b> 7 days</span>
     <span><b>Status</b> Live</span>
   </div>
 
@@ -150,14 +152,12 @@
 
 <h2 id="problem">The problem</h2>
 
-<p>I'm preparing for product management interviews, and I save things constantly — a framework
-posted on LinkedIn, a PDF shared in a study group, a screenshot of an answer structure, a blog
-post bookmarked at midnight.</p>
-
-<p>Almost none of it gets read twice.</p>
+<p>Anyone learning something on their own accumulates a trail of saved material — a framework
+posted on LinkedIn, a PDF shared in a group chat, a screenshot of a diagram, a long article
+bookmarked at midnight. It is saved with real intent, and almost none of it is read twice.</p>
 
 <p>The obvious diagnosis is that people are disorganised, and the obvious fix is a better folder
-structure. I don't think that's right. The saving isn't the broken part — I save things
+structure. I don't think that's right. The saving isn't the broken part — people save
 diligently. Three things break afterwards:</p>
 
 <div class="grid">
@@ -174,12 +174,21 @@ diligently. Three things break afterwards:</p>
 </div>
 
 <h3>Who it's for</h3>
-<p>People preparing for product management interviews. A narrow, well-defined segment with a
-shared vocabulary and a shared deadline — which makes the content types predictable and the
-users reachable for research.</p>
-<p>The same problem exists across exam prep and self-directed learning generally. That's the
-expansion, not the wedge, and it's written into the brief as explicitly out of scope for v0. A
-tool that's excellent for one segment beats a tool that's adequate for five.</p>
+<p>Ultimately, anyone who saves material to learn from later — people studying for exams,
+switching careers, ramping into a new role, or teaching themselves a craft. The behaviour is the
+same everywhere: save with intent, never return.</p>
+<p>The MVP is built for one large, well-defined slice of that: <strong>people preparing for
+product management interviews.</strong> Not because the problem is unique to them, but because
+they have a shared vocabulary, a shared deadline and predictable content types — which makes the
+classifier tractable, the taxonomy meaningful, and the users reachable for research.</p>
+<div class="callout">
+  <div class="label">Why start narrow when the problem is broad</div>
+  <p>A fixed taxonomy is what makes saved content instantly scannable, and a taxonomy only works if
+  you know the domain. Building for everyone on day one means either no categories or generic ones,
+  and both put the burden of organising back on the user — which is the thing that already failed.
+  <strong>Generalising is a configuration problem, not a rebuild</strong>: the ingestion, embedding,
+  retrieval and citation machinery is domain-agnostic already. Only the category list is not.</p>
+</div>
 
 <h2 id="product">What it does</h2>
 
@@ -399,25 +408,30 @@ tool that's excellent for one segment beats a tool that's adequate for five.</p>
 <hr class="rule" />
 
 <div class="prd-open">
-  <h2 id="prd" style="margin-top:6px">Product Requirements — v0</h2>
+  <h2 id="prd" style="margin-top:6px">Product Requirements — MVP</h2>
   <p style="margin-bottom:0">This is the brief the build was actually run against, written before
   the first commit rather than reconstructed afterwards. It's the reason the scope decisions above
   have dates and rationale attached — they were argued once, written down, and then honoured.</p>
 </div>
 
 <h3>1. Problem &amp; opportunity</h3>
-<p>PM-prep content is saved across LinkedIn, WhatsApp groups and bookmarks with good intent, then
-rarely revisited. Even on a revisit it's hard to judge relevance without re-reading, or to find the
-right item at all. Saved effort quietly gets wasted.</p>
+<p>Self-directed learning material is saved across LinkedIn, group chats and bookmarks with good
+intent, then rarely revisited. Even on a revisit it's hard to judge relevance without re-reading,
+or to find the right item at all. Saved effort quietly gets wasted. The MVP addresses this for PM
+interview preparation, where the content types and vocabulary are predictable enough to classify
+well.</p>
 <p>This has an architectural consequence: summaries are stored <em>alongside</em> full content
 rather than generated on demand, and "find the right thing fast" is prioritised over "store
 everything" — a plain folder app already does the latter.</p>
 
 <h3>2. Target user</h3>
-<p><b>Wedge:</b> people preparing for product management interviews — narrow, well-defined, and
-reachable for real research.<br>
-<b>Later:</b> other exam-prep and professional upskilling communities. Explicitly out of scope
-for v0.</p>
+<p><b>Long-term:</b> anyone who saves content to learn from later — self-directed learners,
+career switchers, people ramping into a new role or domain.</p>
+<p><b>MVP wedge:</b> people preparing for product management interviews. A large, well-defined
+subset with predictable content types and a shared vocabulary, which is what makes a fixed
+taxonomy and an accurate classifier possible at all.</p>
+<p><b>Deliberately not yet:</b> other roles and domains. Serving them is a taxonomy and
+onboarding problem rather than an architectural one — see the roadmap.</p>
 
 <h3>3. Goals and non-goals</h3>
 <table>
@@ -434,7 +448,7 @@ for v0.</p>
 <ul>
   <li><b>No live LinkedIn scraping.</b> Manual paste of post text or URL only — scraping saved posts violates LinkedIn's ToS.</li>
   <li><b>No live WhatsApp listening.</b> The user exports a chat with WhatsApp's own feature and uploads the <code>.txt</code>, which is parsed into individual items.</li>
-  <li><b>Single user for v0.</b> No sharing — but every table carries <code>user_id</code> from day one so multi-user isn't a rewrite.</li>
+  <li><b>Single user for the MVP.</b> No sharing — but every table carries <code>user_id</code> from day one so multi-user isn't a rewrite.</li>
   <li><b>Resurfacing cut entirely</b> (2026-08-06, after the other six features shipped). See Decision 04.</li>
 </ul>
 
@@ -476,17 +490,50 @@ Application Tips · Frameworks · Industry News · Other.</p>
   <li>Resurfacing of any kind, rule-based or predictive</li>
 </ul>
 
-<h3>9. Roadmap — not built, deliberately</h3>
-<p><b>Anonymised "what's trending in PM prep this week"</b> across users. It's the network effect
-this product could have: the same embeddings that power personal search would cluster across
-accounts to show what a group is studying. It needs multi-user, a privacy model, and enough
-users to make an aggregate meaningful — all of which are v0's non-goals.</p>
-<p><b>Beyond PM prep</b> — other exam prep and self-directed learning. The mechanics are
-identical; only the taxonomy changes. Which is the argument for keeping the taxonomy a
-configuration rather than an assumption.</p>
+<h3>9. Roadmap</h3>
+<p>Not built, and each one listed with the reason it isn't in the MVP rather than as a wish.</p>
+
+<h4>Next — the friction the MVP still leaves in</h4>
+<table>
+  <thead><tr><th>What</th><th>Why it matters</th></tr></thead>
+  <tbody>
+    <tr><td>Share directly from any app</td><td>Today every save is copy, switch app, paste. On mobile the native share sheet is where saving actually happens — sharing a LinkedIn post or an article straight into the vault removes the only step that competes with the habit it's replacing. This is the single highest-value item on the list, because the product's whole premise is that saving must stay effortless.</td></tr>
+    <tr><td>First-run onboarding</td><td>A new account opens onto an empty vault, which is the least persuasive version of the product — nothing to search, nothing to ask. Onboarding should get one real item in and one question answered before it asks anyone to trust it.</td></tr>
+    <tr><td>Export the vault</td><td>Everything saved here can currently only be read here. Export is what makes the tool safe to adopt, and it should sit <em>inside</em> the reset and delete flows: offering a download before destroying someone's library is the difference between a dangerous action and a reversible one.</td></tr>
+    <tr><td>Browser extension</td><td>The desktop half of the same problem the share sheet solves.</td></tr>
+  </tbody>
+</table>
+
+<h4>Then — beyond one role</h4>
+<table>
+  <thead><tr><th>What</th><th>Why it matters</th></tr></thead>
+  <tbody>
+    <tr><td>Any role, any domain</td><td>Nothing in ingestion, embedding, retrieval or citation is PM-specific — the taxonomy is. Making categories user-configurable, or inferred from what someone actually saves, is what turns this from a PM tool into a learning tool. It needs onboarding to ask what you're learning, and a classifier that can work without a hand-written category list.</td></tr>
+    <tr><td>Practice mode</td><td>The saves already contain questions, frameworks and worked answers. Turning them into drills — flashcards, timed mock questions, spaced repetition over what you starred — is the difference between a library and a study tool, and it's the most natural reason to come back.</td></tr>
+    <tr><td>Collections</td><td>Grouping saves into a plan ("week 3: metrics") gives the vault a shape that a flat list and a category filter can't.</td></tr>
+  </tbody>
+</table>
+
+<h4>Later — needs other people in it</h4>
+<table>
+  <thead><tr><th>What</th><th>Why it matters</th></tr></thead>
+  <tbody>
+    <tr><td>Shared vaults</td><td>Study groups already share this material in group chats. A shared vault is where the export feature and multi-user meet.</td></tr>
+    <tr><td>Anonymised "what's trending"</td><td>The network effect this product could have: the same embeddings that power personal search would cluster across accounts to show what a group is studying. Needs multi-user, a privacy model, and enough users for an aggregate to mean anything.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <div class="label">Sequencing</div>
+  <p>Everything in <b>Next</b> reduces friction on a product that already works. Everything in
+  <b>Then</b> widens who it works for. <b>Later</b> depends on having users to connect, so it can't
+  be pulled forward however appealing it sounds. The one thing I would not build without evidence
+  is resurfacing — <a href="#decisions">Decision 04</a> explains why, and the research questions
+  above describe what would change that.</p>
+</div>
 
 <footer>
-  <p><b>PM Content Vault</b> — 20 commits over 7 days, July–August 2026.<br>
+  <p><b>PM Content Vault</b> — built and shipped as a solo project, 2026.<br>
   <a href="https://pm-content-vault.vercel.app" target="_blank" rel="noopener noreferrer">Live app</a> ·
   <a href="https://github.com/RADHIKA2909/pm-content-vault" target="_blank" rel="noopener noreferrer">Source</a> ·
   Demo login <code>demo@pmvault.app</code> / <code>PMVaultDemo2026!</code></p>
