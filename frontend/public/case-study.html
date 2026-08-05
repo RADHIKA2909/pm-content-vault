@@ -45,6 +45,13 @@
         white-space:nowrap;padding:6px 10px;border-radius:8px}
   nav a:hover{background:var(--wash);color:var(--ink)}
   nav .home{font-weight:700;color:var(--ink);margin-right:auto;padding-left:0}
+  /* Below the width where all ten fit, the strip scrolls. A fade on the right
+     edge is the only thing telling you there is more — without it the last
+     items are simply invisible. */
+  @media (max-width:1099px){
+    nav::after{content:"";position:absolute;right:0;top:0;bottom:1px;width:44px;pointer-events:none;
+               background:linear-gradient(to right,rgba(255,255,255,0),rgba(255,255,255,.96))}
+  }
 
   /* hero */
   header{padding:64px 0 8px}
