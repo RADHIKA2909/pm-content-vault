@@ -63,10 +63,12 @@ function Artwork({ src, fit, seed, label, Icon, fallback }) {
 function WhatsappTile() {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[#25D366]/10">
+      {/* The mark alone. The badge in the corner already says "WhatsApp", and
+          with it moved to the bottom the two sat stacked forty pixels apart
+          saying the same word twice. */}
       <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#25D366]">
         <WhatsappMark />
       </span>
-      <span className="text-[11px] font-medium text-text-secondary">WhatsApp</span>
     </div>
   )
 }
@@ -75,7 +77,7 @@ function WhatsappTile() {
 // before the preview existed, or one pdf.js couldn't rasterise.
 function PdfCover({ title }) {
   return (
-    <div className="relative flex h-full w-full flex-col justify-end overflow-hidden bg-primary p-3.5">
+    <div className="relative flex h-full w-full flex-col justify-end overflow-hidden bg-primary p-3.5 pb-9">
       <span aria-hidden="true" className="absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/10" />
       <span aria-hidden="true" className="absolute -bottom-10 -left-4 h-20 w-20 rounded-full bg-white/[0.07]" />
       <FileText className="absolute right-3 top-3 h-4 w-4 text-white/50" strokeWidth={1.75} />
@@ -102,16 +104,16 @@ function plainText(html) {
 // actually wrote. Their own writing is the most recognisable thing on the card.
 function NoteCover({ text }) {
   return (
-    <div className="relative h-full w-full overflow-hidden bg-accent-light/70 px-3.5 pb-3 pt-9">
+    <div className="relative h-full w-full overflow-hidden bg-accent-light/70 px-3.5 pb-9 pt-3.5">
       <span aria-hidden="true" className="absolute inset-y-0 left-4 w-px bg-accent/25" />
       <div
         aria-hidden="true"
         className="absolute inset-0 opacity-[0.35]"
         style={{
           backgroundImage: 'repeating-linear-gradient(transparent, transparent 21px, rgba(249,115,22,0.18) 22px)',
-          // Aligned to the first line of text, which now starts below the
-          // type badge pinned to the hero's top-left corner.
-          backgroundPosition: '0 40px',
+          // Aligned to the first line of text, which starts at the top of
+          // the page now that the type badge sits in the bottom-right corner.
+          backgroundPosition: '0 18px',
         }}
       />
       <p className="relative ml-3 line-clamp-4 text-[12.5px] italic leading-[22px] text-text-primary/85">
@@ -166,8 +168,10 @@ function CardHero({ item, descriptor }) {
   }
 
   // article — the page's own og:image when the fetch found one, otherwise a
-  // monogram of the domain it came from.
-  return <Artwork src={item.thumbnail_url || item.file_url} seed={domain || title} label={domain} Icon={NotebookPen} />
+  // monogram of the domain it came from. No label on the monogram: for an
+  // article the badge *is* the domain, so it would print the same string
+  // twice in the same corner of the same tile.
+  return <Artwork src={item.thumbnail_url || item.file_url} seed={domain || title} Icon={NotebookPen} />
 }
 
 export default CardHero

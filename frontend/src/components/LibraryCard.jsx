@@ -225,13 +225,19 @@ const LibraryCard = forwardRef(function LibraryCard(
         {card.hasArtwork && (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/30 via-black/10 to-transparent"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 via-black/15 to-transparent"
           />
         )}
 
         {/* Where it came from, stated on the artwork. For an article that's
-            the domain, which is the fastest way to recognise a saved link. */}
-        <span className="pointer-events-none absolute left-2 top-2 flex items-center gap-1.5">
+            the domain, which is the fastest way to recognise a saved link.
+
+            Bottom-right, not top-left: a saved screenshot or a fetched
+            og:image almost always carries its own headline across the top,
+            and a badge there landed in the middle of it — "LinkedIn" reading
+            as part of "Strategy Template". The bottom-right corner is the one
+            place images reliably leave quiet. */}
+        <span className="pointer-events-none absolute bottom-2 right-2 flex items-center gap-1.5">
           <span className="inline-flex max-w-[150px] items-center gap-1 rounded-lg bg-surface/95 px-2 py-1 text-[11px] font-medium text-text-primary shadow-card backdrop-blur-sm">
             <span className="truncate">{card.badge}</span>
           </span>
