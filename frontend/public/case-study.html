@@ -101,6 +101,36 @@
   .rule{height:1px;background:var(--line);border:0;margin:60px 0 0}
   .prd-open{background:var(--wash);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:26px 0}
 
+  .deck{font-size:16.5px;font-weight:500;color:var(--soft);margin:16px 0 0;line-height:1.5}
+
+  /* journey */
+  .step{display:grid;grid-template-columns:38px 1fr;gap:16px;padding:0 0 26px;position:relative}
+  .step:not(:last-child)::before{content:"";position:absolute;left:18px;top:38px;bottom:0;width:2px;background:var(--line)}
+  .step .n{width:38px;height:38px;border-radius:50%;background:var(--brand-soft);color:var(--brand);
+           display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;z-index:1}
+  .step h4{margin:8px 0 4px}
+  .step p{margin:0 0 6px;font-size:15.5px}
+  .friction{display:inline-block;font-size:13px;background:var(--warn-soft);color:var(--warn);
+            border-radius:7px;padding:3px 9px;font-weight:500}
+  .solved{display:inline-block;font-size:13px;background:var(--ok-soft);color:var(--ok);
+          border-radius:7px;padding:3px 9px;font-weight:500}
+
+  /* pipeline diagram */
+  .pipe{border:1px solid var(--line);border-radius:14px;padding:20px;margin:24px 0;background:var(--wash);
+        font:500 13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-x:auto}
+  .pipe .row{display:flex;align-items:center;gap:9px;flex-wrap:nowrap;margin:0 0 11px;white-space:nowrap}
+  .pipe .box{background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 11px;color:var(--ink)}
+  .pipe .box.ai{background:var(--brand-soft);border-color:#d4d4f5;color:var(--brand)}
+  .pipe .box.db{background:var(--ok-soft);border-color:#cfe9e4;color:var(--ok)}
+  .pipe .arw{color:var(--soft)}
+  .pipe .note{color:var(--soft);font-size:12px;margin:2px 0 14px 2px;white-space:normal}
+
+  /* IA tree */
+  .tree{font:500 13.5px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--wash);
+        border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:20px 0;overflow-x:auto;color:var(--body)}
+  .tree b{color:var(--ink)}
+  .tree span{color:var(--soft)}
+
   footer{margin:70px 0 90px;padding-top:26px;border-top:1px solid var(--line);
          font-size:14px;color:var(--soft)}
 
@@ -116,11 +146,13 @@
 <nav><div class="wrap">
   <a class="home" href="#top">PM Content Vault</a>
   <a href="#problem">Problem</a>
+  <a href="#why">Why build it</a>
+  <a href="#journey">Journey</a>
   <a href="#product">Product</a>
+  <a href="#ia">IA</a>
   <a href="#decisions">Decisions</a>
-  <a href="#broke">What broke</a>
-  <a href="#next">What's next</a>
-  <a href="#stack">Stack</a>
+  <a href="#ai">AI architecture</a>
+  <a href="#learnings">Learnings</a>
   <a href="#prd">PRD</a>
 </div></nav>
 
@@ -129,6 +161,8 @@
 <header>
   <span class="kicker">Case study · Solo build</span>
   <h1>The stuff you save to get better at your job, and never look at again.</h1>
+  <p class="deck">How I designed and built an AI-powered personal knowledge system — starting with
+  PM interview preparation.</p>
   <p class="lede">Everyone saves things they intend to learn from, and almost nobody goes back to
   them. PM Content Vault takes the posts, PDFs, screenshots and chat exports scattered across five
   apps, works out what each one is, and lets you ask questions of the whole pile — with every
@@ -190,6 +224,76 @@ classifier tractable, the taxonomy meaningful, and the users reachable for resea
   retrieval and citation machinery is domain-agnostic already. Only the category list is not.</p>
 </div>
 
+<h2 id="why">Why build it, when so much of this exists</h2>
+
+<p>Plenty of tools hold saved content. None of them were built for the specific failure I had, and
+it's worth being precise about why rather than waving at "existing tools don't do it".</p>
+
+<table>
+  <thead><tr><th>What I could have used</th><th>What it's built for — and where that leaves me</th></tr></thead>
+  <tbody>
+    <tr><td>A notes app</td><td>Excellent storage, and organising is the user's job. That's precisely the step that gets skipped at the moment of saving, which is when you're mid-scroll and least willing to file anything. Any tool that asks me to organise recreates the problem.</td></tr>
+    <tr><td>A read-later app</td><td>Built around articles and a reading queue. Most of what I save isn't an article — it's a screenshot, a PDF, a chat message, a post. And it still answers "what have I not read", not "where's that thing about stakeholder conflict".</td></tr>
+    <tr><td>A highlights tool</td><td>Strong at capturing passages out of things you read. It still assumes you know which source to go back to; the search is over sources, and my problem starts before I know which source it is.</td></tr>
+    <tr><td>A general AI chatbot</td><td>Can absolutely answer questions about a document you hand it. The gap is persistence — every session starts empty, so the library never accumulates, nothing gets deduplicated, and nothing carries state like "already read" or "starred". A conversation isn't a corpus.</td></tr>
+    <tr><td>Platform search</td><td>Saved posts stay on the platform that hosted them, so there are five searches instead of one — each keyword-only, none aware of the others.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <div class="label">The gap this fills</div>
+  <p>Every option above is strong at one of <em>accept anything</em>, <em>understand it without
+  being asked</em>, or <em>answer across all of it with citations</em>. The product exists because
+  the value is in doing all three to the same pile — the understanding has to happen at save time,
+  or the retrieval has nothing to work with later.</p>
+</div>
+
+<h2 id="journey">The journey, and where it still hurts</h2>
+<p>Four moments matter. Each one names what the product does and, honestly, what friction is left.</p>
+
+<div style="margin:26px 0">
+  <div class="step">
+    <div class="n">1</div>
+    <div>
+      <h4>Encounter — something worth keeping, mid-scroll</h4>
+      <p>On a phone, inside LinkedIn or a group chat. The window for saving is a few seconds wide;
+      anything more elaborate and the thing is lost.</p>
+      <span class="friction">Still friction: copy → switch app → paste</span>
+      <p style="margin-top:8px;font-size:14.5px;color:var(--soft)">This is the one step the MVP
+      doesn't fix, and the reason share-sheet ingestion is first on the roadmap.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="n">2</div>
+    <div>
+      <h4>Save — hand it over and stop thinking</h4>
+      <p>Paste, upload or drop in a chat export. Extraction, classification, summarisation,
+      embedding and a duplicate check all run before anything is written, and the result is shown
+      for approval with every field editable.</p>
+      <span class="solved">No filing, no folders, no naming</span>
+    </div>
+  </div>
+  <div class="step">
+    <div class="n">3</div>
+    <div>
+      <h4>Return — days later, half-remembering</h4>
+      <p>Either browse the Library, where each card carries a gist, a type and a read time so
+      relevance is judgeable without opening anything — or ask a question in plain language and let
+      retrieval find it.</p>
+      <span class="solved">Semantic search, not keyword recall</span>
+    </div>
+  </div>
+  <div class="step">
+    <div class="n">4</div>
+    <div>
+      <h4>Verify — decide whether to trust the answer</h4>
+      <p>Every answer carries numbered citations. Expanding one shows the exact passage it drew on;
+      opening it lands on the original save, where it can be read, highlighted and annotated.</p>
+      <span class="solved">Checkable, not just plausible</span>
+    </div>
+  </div>
+</div>
+
 <h2 id="product">What it does</h2>
 
 <figure>
@@ -222,6 +326,40 @@ classifier tractable, the taxonomy meaningful, and the users reachable for resea
   <figcaption style="text-align:center"><b>Built for where saving actually happens.</b> The sidebar
   collapses to a bottom bar; cards reflow to a single column.</figcaption>
 </figure>
+
+<h2 id="ia">Information architecture</h2>
+
+<p>Five destinations, and one decision underneath them that everything else follows from.</p>
+
+<div class="tree"><b>Dashboard</b>      <span>— counts, recent saves, continue a conversation</span>
+<b>Library</b>        <span>— everything, filtered by category / source / date / duplicates</span>
+  └ <b>Item</b>       <span>— the content, its AI summary, highlights, related items</span>
+<b>Ask My Vault</b>   <span>— conversations, each answer cited back into the Library</span>
+<b>Favorites</b>      <span>— the starred subset, with study actions over it</span>
+<b>Settings</b>       <span>— account, defaults, data</span></div>
+
+<h3>The item is the atom</h3>
+<p>A WhatsApp export doesn't become one saved item — it becomes one item <em>per message</em>. A
+40-message chat holding three useful ideas would otherwise be a single unsearchable blob, and
+retrieval would return the whole conversation when you wanted one paragraph of it. Splitting at
+ingest is what lets a citation point at something small enough to check.</p>
+
+<h3>Two kinds of label, on purpose</h3>
+<table>
+  <thead><tr><th></th><th>Categories</th><th>Tags</th></tr></thead>
+  <tbody>
+    <tr><td>Who sets them</td><td>The AI, from a fixed list; the user can override</td><td>The user, freely</td></tr>
+    <tr><td>How many</td><td>One to three per item, never zero</td><td>Any</td></tr>
+    <tr><td>Why</td><td>A closed list is what makes the filter rail trustworthy — an open one produces "Product Sense", "Product-Sense" and "PS" within a week</td><td>Personal structure the taxonomy can't anticipate; favourites are implemented as one</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <div class="label">Never zero</div>
+  <p>Every item lands in at least one category, falling back to <code>Other</code> if the model
+  won't commit. An uncategorised bucket sounds harmless and is where things go to be forgotten —
+  which is the entire problem this product exists to fix.</p>
+</div>
 
 <h2 id="decisions">Decisions that shaped it</h2>
 <p>The interesting part of this project isn't the feature list — it's what got argued down.</p>
@@ -287,6 +425,57 @@ classifier tractable, the taxonomy meaningful, and the users reachable for resea
   you least want waiting for a cold start.</p>
 </div>
 
+<h2 id="ai">AI architecture</h2>
+
+<p>Two AI paths, deliberately separated: one runs when content arrives, the other when a question
+is asked. They share an embedding model and nothing else.</p>
+
+<h3>Path 1 — ingestion</h3>
+<div class="pipe">
+  <div class="row"><span class="box">paste / upload / export</span><span class="arw">→</span><span class="box">extract per type</span><span class="arw">→</span><span class="box ai">classify + summarise</span><span class="arw">→</span><span class="box ai">embed</span><span class="arw">→</span><span class="box">dedup check</span><span class="arw">→</span><span class="box">review</span><span class="arw">→</span><span class="box db">commit</span></div>
+  <div class="note">Everything left of <b>commit</b> runs against a buffer. Abandon at review and nothing was ever written.</div>
+</div>
+
+<ul>
+  <li><b>Extraction is per type</b> — sanitised HTML for a note, Tesseract.js OCR in the browser for a screenshot, <code>pdf-parse</code> for a document plus pdf.js rasterising page 1 as cover art, a parser that splits a chat export by timestamp into one item per message, and an HTML fetch with metadata parsing for a link.</li>
+  <li><b>Classification and summarisation are one call</b> — Gemini returns strict JSON: category from the fixed list, subcategory, a short title and subtitle, a 1–2 line summary and 3–5 key points. The response is defended rather than trusted: malformed JSON is recovered, bullet characters normalised, arrays coerced, and an empty response raises instead of saving a blank.</li>
+  <li><b>Embedding</b> — <code>gemini-embedding-001</code> at 768 dimensions, stored in <code>pgvector</code>.</li>
+  <li><b>Duplicate detection reuses that vector</b> — cosine similarity against existing items, above roughly 0.92, surfaced <em>before</em> saving, when it can still change your mind.</li>
+</ul>
+
+<h3>Path 2 — retrieval and answering</h3>
+<div class="pipe">
+  <div class="row"><span class="box">question</span><span class="arw">→</span><span class="box ai">embed</span><span class="arw">→</span><span class="box db">pgvector top-k</span><span class="arw">→</span><span class="box">build context</span><span class="arw">→</span><span class="box ai">generate sections</span><span class="arw">→</span><span class="box">keep referenced sources</span><span class="arw">→</span><span class="box db">store with indexes</span></div>
+  <div class="note">Streamed as Server-Sent Events, so each phase appears when it actually finishes rather than on a timer.</div>
+</div>
+
+<ul>
+  <li><b>The answer is structured, not prose</b> — an overview, a body, optional cards, a key takeaway and suggested follow-ups, so it can be skimmed like a document.</li>
+  <li><b>Only referenced sources become citations.</b> Retrieval returns the top matches; the answer cites some of them. Attaching all of them would inflate the "used N sources" claim into something untrue, so the sources that appear are the ones the text actually pointed at.</li>
+  <li><b>Citations keep their index and their passage.</b> Markers count position in the retrieved set, so a legitimate answer can cite <code>[4]</code> alone — storing only item ids meant a reopened conversation renumbered from 1 and disagreed with its own text.</li>
+  <li><b>Collection-level questions get collection-level context.</b> "What have I saved about metrics?" can't be answered by five chunks, so a compact index of the vault is supplied alongside retrieval.</li>
+</ul>
+
+<h3>Designing for the model failing</h3>
+<p>The model is treated as an unreliable dependency rather than a given, because in practice it is.</p>
+<table>
+  <thead><tr><th>Failure</th><th>Response</th></tr></thead>
+  <tbody>
+    <tr><td>Model overloaded (503)</td><td>Retry with backoff, then fall back across models — another lightweight model first, full Flash last, because its free-tier allowance is roughly 20 requests/day</td></tr>
+    <tr><td>Daily quota exhausted (429)</td><td>A distinct error, because the advice differs: wait a minute versus wait until tomorrow</td></tr>
+    <tr><td>Malformed JSON</td><td>Recovered field by field rather than discarding the whole response</td></tr>
+    <tr><td>Classification fails entirely</td><td>The save still proceeds — the item lands with editable fields. The AI is an accelerator, not a gate</td></tr>
+    <tr><td>Embedding fails</td><td>Retried, because an item without a vector is silently invisible to search and skips dedup — worse than a visible missing summary</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <div class="label">The principle underneath</div>
+  <p>Every one of these degrades toward <em>the user still gets their content saved</em>. The
+  feature that must never degrade is the citation: an answer that can't be checked is worse than
+  no answer, because it looks the same as one that can.</p>
+</div>
+
 <h2 id="broke">What broke, and what I changed</h2>
 <p>Four failures worth keeping, because each one changed how I think about shipping AI features.</p>
 
@@ -341,6 +530,58 @@ classifier tractable, the taxonomy meaningful, and the users reachable for resea
   data migration.</p>
 </details>
 
+<h2 id="learnings">What I'd take to the next build</h2>
+
+<p>Six things I believe more strongly now than when I started, each one paid for by something in
+this project going wrong.</p>
+
+<h3>1. An AI feature's error message is part of the feature</h3>
+<p>When Gemini went down, the app said <em>"The AI couldn't read this one."</em> The content was
+perfectly readable; Google was overloaded. That sentence sends a user off editing input that was
+never the problem. Failure copy has to name the layer that actually failed — and if the system
+can't tell which layer that was, that's a logging gap, not a wording one.</p>
+
+<h3>2. A citation is a promise, and the bar is verification</h3>
+<p>Citations that looked right were subtly wrong twice: renumbered on reopen so the text disagreed
+with its own sources, and showing an item's summary in place of the passage the answer used.
+Neither would fail a test or look broken. For a product whose whole claim is grounded answers,
+<strong>"looks cited" is not the standard — "can be checked" is.</strong></p>
+
+<h3>3. Constraints did more for scope than any prioritisation framework</h3>
+<p>A hard $0 budget and LinkedIn's terms of service each removed whole branches of the tree before
+I could argue with myself about them. Writing them down as locked decisions before building meant
+they held at 1am when the manual paste flow felt tedious. <strong>The constraints I wrote down
+survived; the preferences I merely held did not.</strong></p>
+
+<h3>4. Cutting a specced feature is a decision, not an admission</h3>
+<p>Resurfacing was in my own brief and was the cheapest thing left to build. I cut it because
+surfacing items on an age rule guesses at intent I had no evidence for. The uncomfortable part
+wasn't the analysis — it was that I'd already written it down, and written-down plans acquire
+gravity. Being able to say <em>why</em> it's cut, with the evidence that would bring it back, is
+worth more than shipping it.</p>
+
+<h3>5. Working locally proves less than it feels like it proves</h3>
+<p>One bug would have corrupted saves in production while being nearly invisible in development:
+between analysing and saving, a cache miss dropped the metadata and could store a note with no
+body. Locally it needed a fifteen-minute pause to trigger. On serverless, where consecutive
+requests hit different instances, it becomes the normal path. <strong>Deployment is a different
+environment, not just a different address.</strong></p>
+
+<h3>6. Security posture belongs before the URL, not after</h3>
+<p>Every uploaded file sat in a public bucket — fine on a laptop, not fine the moment the app had
+a public address. Making it private and signing every link took under an hour, and it was the
+thing I'd have been most embarrassed to be asked about. <strong>The moment something becomes
+reachable is the moment its weakest assumption becomes a real one.</strong></p>
+
+<div class="callout ok">
+  <div class="label">The one that generalises</div>
+  <p>Most of these are the same lesson wearing different clothes: <strong>an AI product's hard
+  parts sit around the model, not in it.</strong> The prompt was a day's work. Retries, fallbacks,
+  honest failure states, verifiable citations, and knowing what to do when the model returns
+  nonsense — that was the rest of the week, and it's what decides whether anyone trusts the
+  output.</p>
+</div>
+
 <h2 id="next">What I'd measure, and what I'd ask</h2>
 
 <div class="callout warn">
@@ -389,21 +630,10 @@ classifier tractable, the taxonomy meaningful, and the users reachable for resea
   </tbody>
 </table>
 
-<h3>The retrieval path, end to end</h3>
-<ol>
-  <li>Content is extracted per type — HTML for a note, OCR for a screenshot, <code>pdf-parse</code> for a document, a parser that splits a chat export into one item per message.</li>
-  <li>Gemini classifies it into a fixed taxonomy and writes a title, subtitle, summary and key points.</li>
-  <li>The text is embedded and stored in <code>pgvector</code>, and compared against existing vectors to flag near-duplicates before saving.</li>
-  <li>A question is embedded the same way; the top matches become the context for a grounded answer, and only the sources the answer actually referenced are attached as citations.</li>
-</ol>
-
-<div class="callout">
-  <div class="label">Why a fixed taxonomy</div>
-  <p>Categories are a closed list — Interview Questions, Job Postings, Application Tips,
-  Frameworks, Industry News, Other. Letting the model invent categories produces
-  "Product Sense", "Product-Sense" and "PS" within a week, and a filter rail that's useless by
-  the time it matters.</p>
-</div>
+<p>Two choices worth calling out. <b>The API is a serverless function on the same domain as the
+frontend</b>, so production has no cross-origin requests at all — CORS exists only for local
+development. And <b>OCR and PDF rendering run in the browser</b>, which keeps them off the
+server's clock and off the bill entirely.</p>
 
 <hr class="rule" />
 
