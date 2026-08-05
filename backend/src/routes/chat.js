@@ -3,6 +3,7 @@ import supabase from '../services/supabaseClient.js'
 import { embedText, generateVaultAnswer } from '../services/gemini.js'
 import { sanitizeCitations, referencedIndexes } from '../services/citations.js'
 import { loadVaultIndex } from '../services/vaultIndex.js'
+import { signStoredFiles } from '../services/fileStorage.js'
 
 const router = Router()
 
@@ -268,6 +269,9 @@ router.post('/', async (req, res) => {
           )
           .in('id', itemIds)
       : { data: [] }
+
+    // Source cards render an item's thumbnail, and the bucket is private.
+    await signStoredFiles(items || [])
 
     const citations = matches
       .map((m, i) => ({

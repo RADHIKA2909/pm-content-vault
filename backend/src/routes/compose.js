@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import multer from 'multer'
+import { MAX_UPLOAD_BYTES } from '../services/uploadLimits.js'
 import crypto from 'node:crypto'
 import pdfParse from 'pdf-parse'
 import { insertItem } from '../services/itemsRepo.js'
@@ -7,7 +8,7 @@ import { categorizeAndSummarize, embedText } from '../services/gemini.js'
 import { persistEmbedding, findDuplicate } from '../services/enrichItem.js'
 import { extractFromUrl, fetchPageImage } from '../services/linkExtractor.js'
 import { sanitizeNoteHtml, noteHtmlToText, firstImageUrl, firstLinkUrl } from '../services/noteContent.js'
-import { uploadFile } from '../services/fileStorage.js'
+import { uploadFile, signStoredFiles } from '../services/fileStorage.js'
 import supabase from '../services/supabaseClient.js'
 
 /**
@@ -20,7 +21,7 @@ import supabase from '../services/supabaseClient.js'
  * against nothing but a buffer, and `/commit` is the only thing that writes.
  */
 const router = Router()
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } })
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_UPLOAD_BYTES } })
 
 // Extracted text and embedding, held between analyze and commit so confirming
 // doesn't pay for a second round of Gemini calls. In-memory is sufficient: a
@@ -262,10 +263,21 @@ router.post('/commit', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'th
   try {
     const draft = takeDraft(draftToken)
 
-    // An expired draft is recoverable: re-extract rather than making the user
+    // A missing draft is recoverable: re-extract rather than making the user
     // start over after they've already reviewed everything.
-    const text = draft?.text || (await extractContent(kind, req.body, req.files)).text
-    const meta = draft?.meta || {}
+    //
+    // Both halves have to come from the same place. Taking `text` from the
+    // re-extraction while leaving `meta` empty silently dropped everything
+    // meta carries — a note's sanitised HTML (saving the note with no body at
+    // all), a link's preview image, a PDF's page count.
+    //
+    // This is no longer an edge case: the draft lives in this process's
+    // memory, and in a serverless deployment /analyze and /commit are not
+    // guaranteed to land on the same instance, so the miss is the normal path
+    // rather than the expired one.
+    const extracted = draft?.text ? draft : await extractContent(kind, req.body, req.files)
+    const text = extracted.text
+    const meta = extracted.meta || {}
 
     const keyPoints = JSON.parse(req.body.keyPoints || '[]').filter(Boolean)
     const categories = JSON.parse(req.body.categories || '[]').filter(Boolean)
@@ -338,7 +350,8 @@ router.post('/commit', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'th
     if (embedding) await persistEmbedding(item, text, embedding)
 
     if (draftToken) drafts.delete(draftToken)
-    res.status(201).json(item)
+    // The Saved step shows the item it just created, thumbnail included.
+    res.status(201).json(await signStoredFiles(item))
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

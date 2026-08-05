@@ -1,10 +1,10 @@
 # PM Content Vault — Build Brief (v0 / MVP)
 
 ## One-line summary
-A personal tool that ingests saved PM-prep content (pasted text, links, images, PDFs, WhatsApp exports), auto-categorizes and summarizes it, lets you query it via a RAG chatbot with citations, flags near-duplicates, and resurfaces relevant saved items.
+A personal tool that ingests saved PM-prep content (pasted text, links, images, PDFs, WhatsApp exports), auto-categorizes and summarizes it, lets you query it via a RAG chatbot with citations, and flags near-duplicates.
 
 ## The problem this solves (why we're building it this way)
-PM-prep content gets saved across LinkedIn, WhatsApp groups, and random bookmarked links — with good intent, then it's rarely revisited. Even on the rare re-visit, it's hard to judge relevance without re-reading the whole thing, or to find the right saved item at all. Saved effort quietly gets wasted. This matters for architecture decisions: it's why summaries/gists are stored alongside full content (not a nice-to-have), and why "find the right thing fast" (RAG + resurfacing) matters more than "store everything" (a plain folder/tagging app would already do that).
+PM-prep content gets saved across LinkedIn, WhatsApp groups, and random bookmarked links — with good intent, then it's rarely revisited. Even on the rare re-visit, it's hard to judge relevance without re-reading the whole thing, or to find the right saved item at all. Saved effort quietly gets wasted. This matters for architecture decisions: it's why summaries/gists are stored alongside full content (not a nice-to-have), and why "find the right thing fast" (RAG retrieval with citations) matters more than "store everything" (a plain folder/tagging app would already do that).
 
 ## Target user (wedge market)
 Initial segment: **PM interview-prep learners** (you + your Next Leap cohort) — a narrow, well-defined group for real user research. This is a deliberate beachhead, not the ceiling: the broader vision (UPSC aspirants, other exam-prep communities, professional upskilling groups generally) is a later-stage expansion, explicitly out of scope for v0.
@@ -28,7 +28,7 @@ Initial segment: **PM interview-prep learners** (you + your Next Leap cohort) �
 - **No live LinkedIn scraping.** Manual paste of post text or URL only — scraping your own saved posts violates LinkedIn's ToS.
 - **No live WhatsApp listening.** User manually uses WhatsApp's built-in "Export Chat" feature and uploads the resulting `.txt` file, which gets parsed into individual items.
 - **Single-user only** for v0 — no sharing/collaboration features yet.
-- **Resurfacing is rule-based**, not ML-driven, for v0: (a) items untouched for 14+ days surface in a "revisit" widget, (b) items manually tagged "review before mock" surface with priority. Earn the complexity of smarter triggers later, once there's usage data.
+- **Resurfacing is cut entirely** (decided 2026-08-06, after the other six features shipped). It was scoped as a rule-based "revisit" widget, and building it would have been cheap — the decision is that surfacing items on an age rule guesses at intent the product has no evidence for. Retrieval already answers "find the right thing fast"; a widget nagging about 14-day-old saves answers a question nobody asked. Revisit if usage ever shows people hunting for things they forgot they had.
 
 ## Data Model (tables)
 - `items`: id, user_id, source_type (`linkedin_paste` / `whatsapp_export` / `link` / `pdf` / `image`), raw_content, extracted_text, summary, category, subcategory, created_at, last_engaged_at
@@ -47,12 +47,11 @@ Interview Questions (Product Sense / RCA / Metrics / Strategy / Behavioral), Job
 4. **Dashboard view** — list/filter items by category, show gist + source + date
 5. **RAG chatbot** — query box → embed query → pgvector similarity search (top-k) → Gemini generates an answer grounded in retrieved chunks, with citations linking back to the source item in the dashboard
 6. **Dedup detection** — on ingest, compare new item's embedding against existing ones; flag as "possible duplicate of X" above a similarity threshold
-7. **Resurfacing widget** — the rule-based logic described above
 
 ## Explicitly deferred (do not build yet)
 - LinkedIn/WhatsApp live sync or automated ingestion
 - Multi-user accounts or sharing
-- ML-based/predictive resurfacing
+- Resurfacing of any kind, rule-based or predictive (see the scope decision above)
 
 **Stretch ideas — not built, but keep as interview talking points ("forward-thinking roadmap"):**
 - An aggregate, anonymized "what's trending in PM prep this week" view across users — a network-effect/community growth angle worth mentioning in interviews even though it's not implemented, since it shows you've thought past the personal-tool stage.

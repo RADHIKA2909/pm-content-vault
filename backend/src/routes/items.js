@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import multer from 'multer'
+import { MAX_UPLOAD_BYTES } from '../services/uploadLimits.js'
 import pdfParse from 'pdf-parse'
 import { insertItem, insertItems, countWords } from '../services/itemsRepo.js'
 import { extractFromUrl, fetchPageImage } from '../services/linkExtractor.js'
@@ -8,7 +9,7 @@ import { enrichItem } from '../services/enrichItem.js'
 import { CATEGORIES, embedText, generateGroundedAnswer } from '../services/gemini.js'
 import { sanitizeCitations, referencedIndexes } from '../services/citations.js'
 import { loadVaultIndex } from '../services/vaultIndex.js'
-import { uploadFile } from '../services/fileStorage.js'
+import { uploadFile, signStoredFiles } from '../services/fileStorage.js'
 import {
   sanitizeNoteHtml,
   noteHtmlToText,
@@ -19,7 +20,7 @@ import {
 import supabase from '../services/supabaseClient.js'
 
 const router = Router()
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } })
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_UPLOAD_BYTES } })
 
 // Every query is scoped to req.userId, established by the requireAuth
 // middleware from a Supabase-verified token (see middleware/requireAuth.js).
@@ -249,7 +250,9 @@ router.get('/', async (req, res) => {
     }
   })
 
-  res.json(withDuplicateFlags)
+  // The bucket is private, so every file reference becomes a short-lived
+  // signed link on the way out. One batched call for the whole page.
+  res.json(await signStoredFiles(withDuplicateFlags))
 })
 
 // Full detail for one item — source content, tags, duplicate info, and
@@ -331,12 +334,15 @@ router.get('/:id', async (req, res) => {
     }
   }
 
-  res.json({
+  const detail = {
     ...item,
     duplicateOf,
     duplicateCount: duplicatesOfThis?.length || 0,
     relatedItems,
-  })
+  }
+  // The item itself and every related card it shows.
+  await signStoredFiles([detail, ...relatedItems])
+  res.json(detail)
 })
 
 // Paste text (e.g. a LinkedIn post pasted manually). Notes are optional
