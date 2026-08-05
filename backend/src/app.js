@@ -6,6 +6,7 @@ import chatRouter from './routes/chat.js'
 import annotationsRouter from './routes/annotations.js'
 import { requireAuth } from './middleware/requireAuth.js'
 import { MAX_UPLOAD_LABEL } from './services/uploadLimits.js'
+import supabase from './services/supabaseClient.js'
 
 /**
  * The Express app, with no server attached.
@@ -41,6 +42,42 @@ app.use(express.json())
 // nothing about anyone's data.
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' })
+})
+
+/**
+ * Keeps the database from being paused for inactivity.
+ *
+ * Supabase pauses Free Plan projects that show "low activity" over 7 days, and
+ * a paused project means the first person to open the app waits for it to wake
+ * — which, for a portfolio link, is likely to be exactly the person you least
+ * want waiting. A daily cron (vercel.json) hits this.
+ *
+ * It has to touch Postgres to count: /health only reports that the process is
+ * alive and never opens a connection, so pinging it would prove nothing. The
+ * query is a HEAD count — no rows cross the wire.
+ *
+ * Deliberately outside the /api auth gate, since a cron has no session. When
+ * CRON_SECRET is set, Vercel sends it as a bearer token and it's enforced;
+ * when it isn't, the endpoint still works. That way round on purpose: a
+ * forgotten secret should degrade to an unauthenticated HEAD count, not to a
+ * cron that silently 401s every day while appearing configured.
+ */
+app.get('/keepalive', async (req, res) => {
+  const secret = process.env.CRON_SECRET
+  if (secret && req.headers.authorization !== `Bearer ${secret}`) {
+    return res.status(401).json({ error: 'unauthorized' })
+  }
+  if (!secret) console.warn('CRON_SECRET is not set — /keepalive is unauthenticated')
+
+  const { error } = await supabase.from('items').select('id', { count: 'exact', head: true })
+  if (error) {
+    // A non-200 makes the failure visible in Vercel's cron log rather than
+    // leaving a green tick over a database that never woke up.
+    console.error('Keepalive query failed:', error.message)
+    return res.status(503).json({ ok: false })
+  }
+
+  res.json({ ok: true, at: new Date().toISOString() })
 })
 
 // Everything under /api requires a verified session. Mounted here rather than

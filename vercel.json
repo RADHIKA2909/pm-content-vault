@@ -7,9 +7,16 @@
       "maxDuration": 60
     }
   },
+  "crons": [
+    {
+      "path": "/keepalive",
+      "schedule": "0 6 * * *"
+    }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/health", "destination": "/api" },
+    { "source": "/keepalive", "destination": "/api" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
