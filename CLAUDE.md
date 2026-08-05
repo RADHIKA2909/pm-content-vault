@@ -7,7 +7,7 @@ A personal tool that ingests saved PM-prep content (pasted text, links, images, 
 PM-prep content gets saved across LinkedIn, WhatsApp groups, and random bookmarked links — with good intent, then it's rarely revisited. Even on the rare re-visit, it's hard to judge relevance without re-reading the whole thing, or to find the right saved item at all. Saved effort quietly gets wasted. This matters for architecture decisions: it's why summaries/gists are stored alongside full content (not a nice-to-have), and why "find the right thing fast" (RAG retrieval with citations) matters more than "store everything" (a plain folder/tagging app would already do that).
 
 ## Target user (wedge market)
-Initial segment: **PM interview-prep learners** (you + your Next Leap cohort) — a narrow, well-defined group for real user research. This is a deliberate beachhead, not the ceiling: the broader vision (UPSC aspirants, other exam-prep communities, professional upskilling groups generally) is a later-stage expansion, explicitly out of scope for v0.
+Initial segment: **people preparing for product management interviews** — a narrow, well-defined group, reachable for real user research. This is a deliberate beachhead, not the ceiling: the broader vision (other exam-prep and professional upskilling communities generally) is a later-stage expansion, explicitly out of scope for v0.
 
 ## Why RAG (not fine-tuning or plain keyword search) — carry this reasoning into build decisions
 - Keyword search fails on semantic queries like "that post about handling stakeholder conflict" where the user doesn't remember exact words.
@@ -55,7 +55,7 @@ Interview Questions (Product Sense / RCA / Metrics / Strategy / Behavioral), Job
 
 **Stretch ideas — not built, but keep as interview talking points ("forward-thinking roadmap"):**
 - An aggregate, anonymized "what's trending in PM prep this week" view across users — a network-effect/community growth angle worth mentioning in interviews even though it's not implemented, since it shows you've thought past the personal-tool stage.
-- Expansion beyond PM-prep to other self-directed learning communities (UPSC, other exam-prep, upskilling) — same idea, mention as vision, don't build.
+- Expansion beyond PM-prep to other self-directed learning communities (exam prep, upskilling) — same idea, mention as vision, don't build.
 
 ## Platform: website (web app), not a native mobile app
 This is a **React web app** — accessed through a browser, deployed on Vercel with a URL you can open on desktop or mobile browser. It is not a native iOS/Android app, and nothing here requires building one for v0. If you ever want it installable on a phone home screen later, that's a PWA wrapper — a small addition on top of the same web app, not a separate build.
