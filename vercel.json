@@ -27,12 +27,19 @@
       "destination": "/api"
     },
     {
-      "source": "/case-study",
-      "destination": "/case-study.html"
+      "source": "/prd-case-study",
+      "destination": "/prd-case-study.html"
     },
     {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/case-study",
+      "destination": "/prd-case-study",
+      "permanent": true
     }
   ]
 }
