@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>PM Content Vault — Case Study &amp; PRD</title>
-<meta name="description" content="A RAG-based knowledge tool for PM interview prep: the problem, the scope decisions, what broke, and the PRD it was built against." />
+<meta name="description" content="An AI-powered personal knowledge system: the problem, the scope decisions, the architecture, and the PRD it was built against. MVP audience: Product Management learners." />
 <link rel="icon" type="image/png" href="/favicon.png" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet" />
 <style>
@@ -133,6 +133,30 @@
   .pipe .arw{color:var(--soft)}
   .pipe .note{color:var(--soft);font-size:12px;margin:2px 0 14px 2px;white-space:normal}
 
+  .demo{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px 26px;
+        margin:20px 0 0;padding:0;list-style:none}
+  .demo li{display:grid;grid-template-columns:18px 1fr;gap:10px;font-size:15.5px;line-height:1.5}
+  .demo .tick{color:var(--brand);font-weight:700}
+  .demo b{color:var(--ink);font-weight:600}
+
+  /* one architecture flow */
+  .flow{border:1px solid var(--line);border-radius:14px;background:var(--wash);
+        padding:22px 20px;margin:24px 0}
+  .flow ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;align-items:center}
+  .flow li{width:100%;max-width:430px;text-align:center}
+  .fbox{background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px 14px;
+        display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap}
+  .fbox b{font-size:14.5px;color:var(--ink);font-weight:600}
+  .fbox em{font-style:normal;font-size:12.5px;color:var(--soft)}
+  .fbox.ai{background:var(--brand-soft);border-color:#dcdcf7}
+  .fbox.ai b{color:var(--brand)}
+  .fbox.db{background:var(--ok-soft);border-color:#cfe9e4}
+  .fbox.db b{color:var(--ok)}
+  .farr{color:#b9b7cf;font-size:15px;line-height:1;margin:5px 0}
+  .fphase{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+          color:var(--soft);margin:2px 0 9px}
+  .fphase:not(:first-child){margin-top:15px}
+
   /* IA tree */
   .tree{white-space:pre;font:500 13.5px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--wash);
         border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:20px 0;overflow-x:auto;color:var(--body)}
@@ -208,12 +232,13 @@
 <header>
   <span class="kicker">Case study · Solo build</span>
   <h1>The stuff you save to get better at your job, and never look at again.</h1>
-  <p class="deck">How I designed and built an AI-powered personal knowledge system — starting with
-  PM interview preparation.</p>
+  <p class="deck">How I designed and built an AI-powered personal knowledge system. The first
+  version focuses on Product Management learners as its MVP audience; the architecture is built to
+  support any learning domain.</p>
   <p class="lede">Everyone saves things they intend to learn from, and almost nobody goes back to
-  them. PM Content Vault takes the posts, PDFs, screenshots and chat exports scattered across five
-  apps, works out what each one is, and lets you ask questions of the whole pile — with every
-  answer citing the saves it came from.</p>
+  them. PM Content Vault — the MVP implementation of a broader knowledge system — takes the posts,
+  PDFs, screenshots and chat exports scattered across five apps, works out what each one is, and
+  lets you ask questions of the whole pile, with every answer citing the saves it came from.</p>
 
   <div class="meta">
     <span><b>Role</b> Product &amp; build, end to end</span>
@@ -259,12 +284,13 @@ diligently. Three things break afterwards:</p>
 <p>Ultimately, anyone who saves material to learn from later — people studying for exams,
 switching careers, ramping into a new role, or teaching themselves a craft. The behaviour is the
 same everywhere: save with intent, never return.</p>
-<p>The MVP is built for one large, well-defined slice of that: <strong>people preparing for
-product management interviews.</strong> Not because the problem is unique to them, but because
-they have a shared vocabulary, a shared deadline and predictable content types — which makes the
-classifier tractable, the taxonomy meaningful, and the users reachable for research.</p>
+<p>The first user segment is one large, well-defined slice of that: <strong>Product Management
+learners.</strong> Not because the problem is unique to them, but because they have a shared
+vocabulary, a shared deadline and predictable content types — which makes the classifier
+tractable, the taxonomy meaningful, and the users reachable for research. It is the initial
+learning domain, not the ceiling.</p>
 <div class="callout">
-  <div class="label">Why start narrow when the problem is broad</div>
+  <div class="label">Why the MVP starts narrow when the problem is broad</div>
   <p>A fixed taxonomy is what makes saved content instantly scannable, and a taxonomy only works if
   you know the domain. Building for everyone on day one means either no categories or generic ones,
   and both put the burden of organising back on the user — which is the thing that already failed.
@@ -478,30 +504,37 @@ ingest is what lets a citation point at something small enough to check.</p>
 <p>Two AI paths, deliberately separated: one runs when content arrives, the other when a question
 is asked. They share an embedding model and nothing else.</p>
 
-<h3>Path 1 — ingestion</h3>
-<div class="pipe">
-  <div class="row"><span class="box">paste / upload / export</span><span class="arw">→</span><span class="box">extract per type</span><span class="arw">→</span><span class="box ai">classify + summarise</span><span class="arw">→</span><span class="box ai">embed</span><span class="arw">→</span><span class="box">dedup check</span><span class="arw">→</span><span class="box">review</span><span class="arw">→</span><span class="box db">commit</span></div>
-  <div class="note">Everything left of <b>commit</b> runs against a buffer. Abandon at review and nothing was ever written.</div>
+<div class="flow">
+  <div class="fphase">Ingestion — when content arrives</div>
+  <ol>
+    <li><div class="fbox"><b>Save content</b> <em>paste · upload · chat export</em></div></li>
+    <li class="farr">↓</li>
+    <li><div class="fbox"><b>Content extraction</b> <em>HTML · OCR · PDF · chat parser</em></div></li>
+    <li class="farr">↓</li>
+    <li><div class="fbox ai"><b>AI classification</b> <em>fixed taxonomy</em></div></li>
+    <li class="farr">↓</li>
+    <li><div class="fbox ai"><b>Summary generation</b> <em>gist · key points</em></div></li>
+    <li class="farr">↓</li>
+    <li><div class="fbox ai"><b>Embeddings</b> <em>768 dimensions</em></div></li>
+    <li class="farr">↓</li>
+    <li><div class="fbox db"><b>Vector database</b> <em>pgvector · dedup check</em></div></li>
+  </ol>
+  <div class="fphase">Retrieval — when a question is asked</div>
+  <ol>
+    <li><div class="fbox"><b>Ask My Vault</b> <em>question embedded, top matches retrieved</em></div></li>
+    <li class="farr">↓</li>
+    <li><div class="fbox ai"><b>Grounded answer + citations</b> <em>only the sources the answer used</em></div></li>
+  </ol>
 </div>
 
+<h3>What each stage does</h3>
 <ul>
-  <li><b>Extraction is per type</b> — sanitised HTML for a note, Tesseract.js OCR in the browser for a screenshot, <code>pdf-parse</code> for a document plus pdf.js rasterising page 1 as cover art, a parser that splits a chat export by timestamp into one item per message, and an HTML fetch with metadata parsing for a link.</li>
-  <li><b>Classification and summarisation are one call</b> — Gemini returns strict JSON: category from the fixed list, subcategory, a short title and subtitle, a 1–2 line summary and 3–5 key points. The response is defended rather than trusted: malformed JSON is recovered, bullet characters normalised, arrays coerced, and an empty response raises instead of saving a blank.</li>
-  <li><b>Embedding</b> — <code>gemini-embedding-001</code> at 768 dimensions, stored in <code>pgvector</code>.</li>
-  <li><b>Duplicate detection reuses that vector</b> — cosine similarity against existing items, above roughly 0.92, surfaced <em>before</em> saving, when it can still change your mind.</li>
-</ul>
-
-<h3>Path 2 — retrieval and answering</h3>
-<div class="pipe">
-  <div class="row"><span class="box">question</span><span class="arw">→</span><span class="box ai">embed</span><span class="arw">→</span><span class="box db">pgvector top-k</span><span class="arw">→</span><span class="box">build context</span><span class="arw">→</span><span class="box ai">generate sections</span><span class="arw">→</span><span class="box">keep referenced sources</span><span class="arw">→</span><span class="box db">store with indexes</span></div>
-  <div class="note">Streamed as Server-Sent Events, so each phase appears when it actually finishes rather than on a timer.</div>
-</div>
-
-<ul>
-  <li><b>The answer is structured, not prose</b> — an overview, a body, optional cards, a key takeaway and suggested follow-ups, so it can be skimmed like a document.</li>
-  <li><b>Only referenced sources become citations.</b> Retrieval returns the top matches; the answer cites some of them. Attaching all of them would inflate the "used N sources" claim into something untrue, so the sources that appear are the ones the text actually pointed at.</li>
-  <li><b>Citations keep their index and their passage.</b> Markers count position in the retrieved set, so a legitimate answer can cite <code>[4]</code> alone — storing only item ids meant a reopened conversation renumbered from 1 and disagreed with its own text.</li>
-  <li><b>Collection-level questions get collection-level context.</b> "What have I saved about metrics?" can't be answered by five chunks, so a compact index of the vault is supplied alongside retrieval.</li>
+  <li><b>Extraction is per type</b> — sanitised HTML for a note, Tesseract.js OCR in the browser for a screenshot, <code>pdf-parse</code> for a document plus pdf.js rasterising page 1 as cover art, a parser that splits a chat export into one item per message, and an HTML fetch with metadata parsing for a link.</li>
+  <li><b>Classification and summarisation are one call</b> — Gemini returns strict JSON: category from the fixed list, a short title and subtitle, a 1–2 line summary and 3–5 key points. The response is defended rather than trusted: malformed JSON is recovered, arrays coerced, and an empty response raises instead of saving a blank.</li>
+  <li><b>Duplicate detection reuses the embedding</b> — cosine similarity against existing items, surfaced <em>before</em> saving, when it can still change your mind.</li>
+  <li><b>Nothing is written until the review step is confirmed.</b> Everything above runs against a buffer; abandon at review and no row was ever created.</li>
+  <li><b>Only referenced sources become citations.</b> Retrieval returns the top matches; the answer cites some of them. Attaching all would inflate the "used N sources" claim into something untrue.</li>
+  <li><b>Citations keep their index and their passage</b>, so a reopened conversation still agrees with its own text — and the exact passage an answer leaned on stays checkable.</li>
 </ul>
 
 <h3>Designing for the model failing</h3>
@@ -695,9 +728,9 @@ server's clock and off the bill entirely.</p>
 <h3>1. Problem &amp; opportunity</h3>
 <p>Self-directed learning material is saved across LinkedIn, group chats and bookmarks with good
 intent, then rarely revisited. Even on a revisit it's hard to judge relevance without re-reading,
-or to find the right item at all. Saved effort quietly gets wasted. The MVP addresses this for PM
-interview preparation, where the content types and vocabulary are predictable enough to classify
-well.</p>
+or to find the right item at all. Saved effort quietly gets wasted. The MVP addresses this for Product
+Management learners, whose content types and vocabulary are predictable enough to classify well —
+the initial learning domain rather than the intended limit.</p>
 <p>This has an architectural consequence: summaries are stored <em>alongside</em> full content
 rather than generated on demand, and "find the right thing fast" is prioritised over "store
 everything" — a plain folder app already does the latter.</p>
@@ -705,8 +738,8 @@ everything" — a plain folder app already does the latter.</p>
 <h3>2. Target user</h3>
 <p><b>Long-term:</b> anyone who saves content to learn from later — self-directed learners,
 career switchers, people ramping into a new role or domain.</p>
-<p><b>MVP wedge:</b> people preparing for product management interviews. A large, well-defined
-subset with predictable content types and a shared vocabulary, which is what makes a fixed
+<p><b>Initial audience (MVP):</b> Product Management learners. A large, well-defined first user
+segment with predictable content types and a shared vocabulary, which is what makes a fixed
 taxonomy and an accurate classifier possible at all.</p>
 <p><b>Deliberately not yet:</b> other roles and domains. Serving them is a taxonomy and
 onboarding problem rather than an architectural one — see the roadmap.</p>
@@ -768,26 +801,37 @@ Application Tips · Frameworks · Industry News · Other.</p>
   <li>Resurfacing of any kind, rule-based or predictive</li>
 </ul>
 
-<h3>9. Roadmap</h3>
+<h3>9. What this project demonstrates</h3>
+<ul class="demo">
+  <li><span class="tick">▸</span><span><b>Problem definition</b> — diagnosing why saved content goes unused, and rejecting the obvious "better folders" answer</span></li>
+  <li><span class="tick">▸</span><span><b>MVP scoping and tradeoffs</b> — a deliberate first user segment, four locked constraints, one specced feature cut with its reasoning</span></li>
+  <li><span class="tick">▸</span><span><b>End-to-end AI product design</b> — ingestion, review, retrieval and verification as one experience</span></li>
+  <li><span class="tick">▸</span><span><b>RAG retrieval workflow</b> — extraction, embeddings, vector search and grounded generation, built rather than described</span></li>
+  <li><span class="tick">▸</span><span><b>Designing for trust</b> — citations that resolve to the exact passage used, and answers that degrade honestly when the model fails</span></li>
+  <li><span class="tick">▸</span><span><b>Feasibility against user value</b> — a $0 architecture, browser-side OCR, and limits chosen to fail with a clear message</span></li>
+  <li><span class="tick">▸</span><span><b>Independent delivery</b> — idea to deployed product, including auth, security posture and a live demo</span></li>
+</ul>
+
+<h3>10. Roadmap</h3>
 <p>Not built, and each one listed with the reason it isn't in the MVP rather than as a wish.</p>
 
 <h4>Next — the friction the MVP still leaves in</h4>
 <table>
   <thead><tr><th>What</th><th>Why it matters</th></tr></thead>
   <tbody>
-    <tr><td>Share directly from any app</td><td>Today every save is copy, switch app, paste. On mobile the native share sheet is where saving actually happens — sharing a LinkedIn post or an article straight into the vault removes the only step that competes with the habit it's replacing. This is the single highest-value item on the list, because the product's whole premise is that saving must stay effortless.</td></tr>
-    <tr><td>First-run onboarding</td><td>A new account opens onto an empty vault, which is the least persuasive version of the product — nothing to search, nothing to ask. Onboarding should get one real item in and one question answered before it asks anyone to trust it.</td></tr>
-    <tr><td>Export the vault</td><td>Everything saved here can currently only be read here. Export is what makes the tool safe to adopt, and it should sit <em>inside</em> the reset and delete flows: offering a download before destroying someone's library is the difference between a dangerous action and a reversible one.</td></tr>
+    <tr><td>Share directly from any app</td><td>Every save is currently copy, switch app, paste. The mobile share sheet is where saving actually happens, and removing that step matters most of anything here — the premise is that saving stays effortless.</td></tr>
+    <tr><td>First-run onboarding</td><td>A new account opens onto an empty vault — nothing to search, nothing to ask. Onboarding should land one real item and one answered question before asking for trust.</td></tr>
+    <tr><td>Export the vault</td><td>What's saved here can only be read here. Export makes the tool safe to adopt, and belongs <em>inside</em> the reset and delete flows — a download offered before destroying a library is what makes the action reversible.</td></tr>
     <tr><td>Browser extension</td><td>The desktop half of the same problem the share sheet solves.</td></tr>
   </tbody>
 </table>
 
-<h4>Then — beyond one role</h4>
+<h4>Then — beyond the first domain</h4>
 <table>
   <thead><tr><th>What</th><th>Why it matters</th></tr></thead>
   <tbody>
-    <tr><td>Any role, any domain</td><td>Nothing in ingestion, embedding, retrieval or citation is PM-specific — the taxonomy is. Making categories user-configurable, or inferred from what someone actually saves, is what turns this from a PM tool into a learning tool. It needs onboarding to ask what you're learning, and a classifier that can work without a hand-written category list.</td></tr>
-    <tr><td>Practice mode</td><td>The saves already contain questions, frameworks and worked answers. Turning them into drills — flashcards, timed mock questions, spaced repetition over what you starred — is the difference between a library and a study tool, and it's the most natural reason to come back.</td></tr>
+    <tr><td>Any role, any domain</td><td>Nothing in ingestion, embedding, retrieval or citation is domain-specific — only the taxonomy is. Making categories configurable, or inferred from what someone saves, turns the MVP into a general learning system. Needs onboarding that asks what you're learning, and a classifier that works without a hand-written category list.</td></tr>
+    <tr><td>Practice mode</td><td>The saves already hold questions, frameworks and worked answers. Turning them into drills and spaced repetition is what separates a library from a study tool — and the most natural reason to return.</td></tr>
     <tr><td>Collections</td><td>Grouping saves into a plan ("week 3: metrics") gives the vault a shape that a flat list and a category filter can't.</td></tr>
   </tbody>
 </table>
@@ -797,17 +841,16 @@ Application Tips · Frameworks · Industry News · Other.</p>
   <thead><tr><th>What</th><th>Why it matters</th></tr></thead>
   <tbody>
     <tr><td>Shared vaults</td><td>Study groups already share this material in group chats. A shared vault is where the export feature and multi-user meet.</td></tr>
-    <tr><td>Anonymised "what's trending"</td><td>The network effect this product could have: the same embeddings that power personal search would cluster across accounts to show what a group is studying. Needs multi-user, a privacy model, and enough users for an aggregate to mean anything.</td></tr>
+    <tr><td>Anonymised "what's trending"</td><td>The network effect available here: the same embeddings that power personal search would cluster across accounts to show what a group is studying. Needs multi-user, a privacy model, and enough users for an aggregate to mean anything.</td></tr>
   </tbody>
 </table>
 
 <div class="callout warn">
   <div class="label">Sequencing</div>
-  <p>Everything in <b>Next</b> reduces friction on a product that already works. Everything in
-  <b>Then</b> widens who it works for. <b>Later</b> depends on having users to connect, so it can't
-  be pulled forward however appealing it sounds. The one thing I would not build without evidence
-  is resurfacing — <a href="#decisions">Decision 04</a> explains why, and the research questions
-  above describe what would change that.</p>
+  <p><b>Next</b> reduces friction on a product that already works; <b>Then</b> widens who it works
+  for; <b>Later</b> needs users to connect, so it can't be pulled forward however appealing. The
+  one thing I would not build without evidence is resurfacing — see
+  <a href="#decisions">Decision 04</a>.</p>
 </div>
 
 <footer>
