@@ -1,7 +1,7 @@
 {
   "name": "pm-content-vault-frontend",
   "private": true,
-  "version": "0.0.1",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "predev": "lsof -ti:5173 | xargs kill -9 2>/dev/null; exit 0",
