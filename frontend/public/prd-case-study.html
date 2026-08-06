@@ -69,6 +69,7 @@
   .creds{margin:16px 0 0;background:var(--wash);border:1px solid var(--line);border-radius:12px;
          padding:13px 16px;font-size:14px}
   .creds code{background:#fff}
+  .printlinks{display:none}
 
   /* blocks */
   .callout{border-left:3px solid var(--brand);background:var(--brand-soft);
@@ -173,7 +174,16 @@
     nav{display:none}
     .wrap{max-width:100%;padding:0}
     header{padding-top:0}
-    .cta{display:none}          /* buttons are not clickable on paper */
+    /* A button is meaningless on paper, and the URLs were only in the footer
+       on the last page — so a printed copy gave a reader no way to reach the
+       thing it describes until they had finished it. */
+    .cta{display:none}
+    .printlinks{display:block;margin:10px 0 0;padding:9px 12px;border:1px solid #e6e4f0;
+                border-radius:10px;font-size:9pt;line-height:1.55;background:#f7f6fc}
+    .printlinks b{display:inline;font-size:8.5pt;letter-spacing:.07em;text-transform:uppercase;
+                  color:#6b6885;margin-right:8px}
+    .printlinks a{color:#5b5bd6;text-decoration:none}
+    .printlinks span{color:#6b6885}
     h1{font-size:26pt;max-width:none}
     h2{font-size:16pt;margin-top:22pt}
     h3{font-size:12pt}
@@ -250,6 +260,11 @@
     <a class="btn" href="https://github.com/RADHIKA2909/pm-content-vault" target="_blank" rel="noopener noreferrer">Source on GitHub</a>
     <a class="btn" href="#prd">Read the PRD</a>
     <a class="btn" href="/pm-content-vault-prd-case-study.pdf" download>Download PDF</a>
+  </div>
+  <div class="printlinks">
+    <b>Live app</b> <a href="https://pm-content-vault.vercel.app">pm-content-vault.vercel.app</a>
+    <span> &nbsp;·&nbsp; </span><b>Source</b> <a href="https://github.com/RADHIKA2909/pm-content-vault">github.com/RADHIKA2909/pm-content-vault</a>
+    <br><span>Read this online at </span><a href="https://pm-content-vault.vercel.app/prd-case-study">pm-content-vault.vercel.app/prd-case-study</a>
   </div>
   <div class="creds">
     <b>Try it without signing up</b> — <code>demo@pmvault.app</code> / <code>PMVaultDemo2026!</code>
