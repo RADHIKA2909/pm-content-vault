@@ -142,6 +142,45 @@
   footer{margin:70px 0 90px;padding-top:26px;border-top:1px solid var(--line);
          font-size:14px;color:var(--soft)}
 
+  @media print{
+    :root{--max:100%}
+    @page{margin:16mm 14mm}
+    body{font-size:10.5pt;line-height:1.55;color:#1a1a2e}
+    nav{display:none}
+    .wrap{max-width:100%;padding:0}
+    header{padding-top:0}
+    .cta{display:none}          /* buttons are not clickable on paper */
+    h1{font-size:26pt;max-width:none}
+    h2{font-size:16pt;margin-top:22pt}
+    h3{font-size:12pt}
+    .lede,.deck{max-width:none}
+
+    /* Nothing should be split across a page break mid-thought. */
+    /* Small, self-contained blocks stay whole. Long ones are allowed to
+       split — forcing a 400px table onto the next page leaves most of the
+       previous one blank, which is how 17 pages of content became 21. */
+    figure,.callout,.card,.step,.pipe,.tree{break-inside:avoid;page-break-inside:avoid}
+    table,details,.decision{break-inside:auto;page-break-inside:auto}
+    tr,summary{break-inside:avoid;page-break-inside:avoid}
+    thead{display:table-header-group}
+    h2,h3,h4{break-after:avoid;page-break-after:avoid}
+    /* No forced break before every section — it produced a stack of
+       half-empty pages. Sections just need to not orphan their heading. */
+
+    /* Collapsed sections would print as headings with nothing under them. */
+    details{border:1px solid #e6e4f0}
+    summary{list-style:none}
+    summary::before{content:""}
+
+    .prd-open{break-before:page;page-break-before:page}
+    figure img{max-height:none;border:1px solid #ddd}
+    a{color:#1a1a2e;text-decoration:none}
+    /* A printed link is useless without its destination. */
+    .creds a[href^="http"]::after,footer a[href^="http"]::after{content:" (" attr(href) ")";font-size:8.5pt;color:#6b6885}
+    table{display:table;font-size:9.5pt}
+    .pipe{font-size:8.5pt}
+  }
+
   @media (max-width:600px){
     body{font-size:16px}
     header{padding-top:40px}
@@ -185,6 +224,7 @@
     <a class="btn primary" href="https://pm-content-vault.vercel.app" target="_blank" rel="noopener noreferrer">Open the live app →</a>
     <a class="btn" href="https://github.com/RADHIKA2909/pm-content-vault" target="_blank" rel="noopener noreferrer">Source on GitHub</a>
     <a class="btn" href="#prd">Read the PRD</a>
+    <a class="btn" href="/pm-content-vault-prd-case-study.pdf" download>Download PDF</a>
   </div>
   <div class="creds">
     <b>Try it without signing up</b> — <code>demo@pmvault.app</code> / <code>PMVaultDemo2026!</code>
@@ -778,5 +818,20 @@ Application Tips · Frameworks · Industry News · Other.</p>
 </footer>
 
 </div>
+<script>
+  // The "what broke" sections are collapsed by default. Printing them shut
+  // would put four headings on the page with nothing underneath, so they are
+  // opened before the print view is composed — and closed again afterwards so
+  // the screen version is unchanged.
+  var reopened = []
+  addEventListener('beforeprint', function () {
+    reopened = [].filter.call(document.querySelectorAll('details'), function (d) { return !d.open })
+    reopened.forEach(function (d) { d.open = true })
+  })
+  addEventListener('afterprint', function () {
+    reopened.forEach(function (d) { d.open = false })
+    reopened = []
+  })
+</script>
 </body>
 </html>
