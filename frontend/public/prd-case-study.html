@@ -43,6 +43,9 @@
   nav a{color:var(--soft);text-decoration:none;font-size:13.5px;font-weight:500;
         white-space:nowrap;padding:6px 10px;border-radius:8px}
   nav a:hover{background:var(--wash);color:var(--ink)}
+  /* Set by the scroll-spy below. Reuses the hover colour rather than
+     introducing a second idea of "current". */
+  nav a.here{color:var(--ink);box-shadow:inset 0 -2px 0 var(--brand)}
   nav .home{font-weight:700;color:var(--ink);margin-right:auto;padding-left:0}
   /* Below the width where all ten fit, the strip scrolls. A fade on the right
      edge is the only thing telling you there is more — without it the last
@@ -59,6 +62,7 @@
   .lede{font-size:20px;line-height:1.6;color:var(--body);margin:18px 0 0;max-width:62ch}
   .meta{display:flex;flex-wrap:wrap;gap:8px 26px;margin:26px 0 0;font-size:14px;color:var(--soft)}
   .meta b{color:var(--ink);font-weight:600}
+  .meta .dot{color:#c9c7db}
 
   .cta{display:flex;flex-wrap:wrap;gap:10px;margin:30px 0 6px}
   .btn{display:inline-flex;align-items:center;gap:7px;border-radius:11px;padding:11px 17px;
@@ -170,7 +174,7 @@
   @media print{
     :root{--max:100%}
     @page{margin:16mm 14mm}
-    body{font-size:10.5pt;line-height:1.55;color:#1a1a2e}
+    body{font-size:10.5pt;line-height:1.52;color:#1a1a2e}
     nav{display:none}
     .wrap{max-width:100%;padding:0}
     header{padding-top:0}
@@ -207,7 +211,11 @@
     summary::before{content:""}
 
     .prd-open{break-before:page;page-break-before:page}
-    figure img{max-height:none;border:1px solid #ddd}
+    figure{margin:16px 0}
+    figure img{max-height:none;border:1px solid #ddd;width:70%;margin:0 auto}
+    figcaption{font-size:8.5pt}
+    /* The flow diagram should never be cut in half. */
+    .flow{break-inside:avoid;page-break-inside:avoid}
     a{color:#1a1a2e;text-decoration:none}
     /* A printed link is useless without its destination. */
     .creds a[href^="http"]::after,footer a[href^="http"]::after{content:" (" attr(href) ")";font-size:8.5pt;color:#6b6885}
@@ -246,13 +254,14 @@
   version focuses on Product Management learners as its MVP audience; the architecture is built to
   support any learning domain.</p>
   <p class="lede">Everyone saves things they intend to learn from, and almost nobody goes back to
-  them. PM Content Vault — the MVP implementation of a broader knowledge system — takes the posts,
-  PDFs, screenshots and chat exports scattered across five apps, works out what each one is, and
-  lets you ask questions of the whole pile, with every answer citing the saves it came from.</p>
+  them. PM Content Vault is the MVP implementation of a broader knowledge system. It takes the
+  posts, PDFs, screenshots and chat exports scattered across five apps, works out what each one is,
+  and lets you ask questions of the whole pile, with every answer citing the saves it came from.</p>
 
   <div class="meta">
-    <span><b>Role</b> Product &amp; build, end to end</span>
-    <span><b>Status</b> Live</span>
+    <span><b>Role:</b> Product &amp; build, end to end</span>
+    <span aria-hidden="true" class="dot">·</span>
+    <span><b>Status:</b> Live</span>
   </div>
 
   <div class="cta">
@@ -267,118 +276,121 @@
     <br><span>Read this online at </span><a href="https://pm-content-vault.vercel.app/prd-case-study">pm-content-vault.vercel.app/prd-case-study</a>
   </div>
   <div class="creds">
-    <b>Try it without signing up</b> — <code>demo@pmvault.app</code> / <code>PMVaultDemo2026!</code>
+    <b>Try it without signing up:</b> <code>demo@pmvault.app</code> / <code>PMVaultDemo2026!</code>
     <br><span style="color:var(--soft)">A demo account with one saved item of every supported type.</span>
   </div>
 </header>
 
 <h2 id="problem">The problem</h2>
 
-<p>Anyone learning something on their own accumulates a trail of saved material — a framework
+<p>Anyone learning something on their own ends up with a trail of saved material. A framework
 posted on LinkedIn, a PDF shared in a group chat, a screenshot of a diagram, a long article
-bookmarked at midnight. It is saved with real intent, and almost none of it is read twice.</p>
+bookmarked at midnight. All of it saved with real intent, and almost none of it read twice.</p>
 
-<p>The obvious diagnosis is that people are disorganised, and the obvious fix is a better folder
-structure. I don't think that's right. The saving isn't the broken part — people save
-diligently. Three things break afterwards:</p>
+<p>The obvious diagnosis is that people are disorganised and need a better folder structure. I
+don't think that's right. Saving isn't the part that breaks; people do that diligently enough.
+What breaks comes afterwards, and there are three of them.</p>
 
 <div class="grid">
   <div class="card"><h4>It's scattered</h4><p>LinkedIn saves, WhatsApp media, browser bookmarks, a Notes app. No single place to look, so looking anywhere feels pointless.</p></div>
   <div class="card"><h4>You can't judge it</h4><p>A saved link is a title and a thumbnail. Whether it's worth ten minutes takes ten minutes to find out.</p></div>
-  <div class="card"><h4>You can't find it</h4><p>You remember <em>"that post about handling stakeholder conflict"</em> — not a keyword that appears in it.</p></div>
+  <div class="card"><h4>You can't find it</h4><p>What you remember is <em>"that post about handling stakeholder conflict"</em>, which is never a keyword that appears in it.</p></div>
 </div>
 
 <div class="callout">
   <div class="label">The insight this product is built on</div>
-  <p>Storage was never the bottleneck. <strong>Retrieval and judgment</strong> were. A folder app
-  solves the problem I don't have. That single conclusion is why summaries are generated and stored
-  at ingest rather than on demand, and why semantic search came before organisation features.</p>
+  <p>Storage was never the bottleneck. <strong>Retrieval and judgment</strong> were, which means a
+  folder app solves a problem I don't have. Everything else follows from that: it's why summaries
+  get generated and stored the moment something is saved rather than on demand, and why semantic
+  search got built before any organisation features.</p>
 </div>
 
-<h3>Who it's for</h3>
-<p>Ultimately, anyone who saves material to learn from later — people studying for exams,
-switching careers, ramping into a new role, or teaching themselves a craft. The behaviour is the
-same everywhere: save with intent, never return.</p>
-<p>The first user segment is one large, well-defined slice of that: <strong>Product Management
-learners.</strong> Not because the problem is unique to them, but because they have a shared
-vocabulary, a shared deadline and predictable content types — which makes the classifier
-tractable, the taxonomy meaningful, and the users reachable for research. It is the initial
-learning domain, not the ceiling.</p>
+<h2 id="audience">Who it's for</h2>
+<p>Ultimately anyone who saves material to learn from later: people studying for exams, switching
+careers, ramping into a new role, or teaching themselves a craft. The behaviour is the same
+everywhere. Save with intent, never return.</p>
+<p>The first user segment is one large, well-defined slice of that group, <strong>Product
+Management learners</strong>. The problem isn't unique to them. What they have is a shared
+vocabulary, a shared deadline and fairly predictable content types, and those three things are
+what make the classifier tractable, the taxonomy meaningful and the users reachable for research.
+It's the initial learning domain rather than the ceiling.</p>
 <div class="callout">
   <div class="label">Why the MVP starts narrow when the problem is broad</div>
   <p>A fixed taxonomy is what makes saved content instantly scannable, and a taxonomy only works if
-  you know the domain. Building for everyone on day one means either no categories or generic ones,
-  and both put the burden of organising back on the user — which is the thing that already failed.
-  <strong>Generalising is a configuration problem, not a rebuild</strong>: the ingestion, embedding,
-  retrieval and citation machinery is domain-agnostic already. Only the category list is not.</p>
+  you know the domain. Build for everyone on day one and you end up with either no categories or
+  generic ones. Both hand the job of organising back to the user, which is the thing that already
+  failed. The good news is that <strong>generalising later is a configuration problem rather than a
+  rebuild</strong>. Ingestion, embedding, retrieval and citation are already domain-agnostic. The
+  category list is the only part that isn't.</p>
 </div>
 
 <h2 id="why">Why build it, when so much of this exists</h2>
 
-<p>Plenty of tools hold saved content. None of them were built for the specific failure I had, and
-it's worth being precise about why rather than waving at "existing tools don't do it".</p>
+<p>Plenty of tools hold saved content. None of them were built for the specific failure I had.
+It's worth being precise about why, rather than waving vaguely at "existing tools don't do it".</p>
 
 <table>
-  <thead><tr><th>What I could have used</th><th>What it's built for — and where that leaves me</th></tr></thead>
+  <thead><tr><th>What I could have used</th><th>What it's built for, and where that leaves me</th></tr></thead>
   <tbody>
     <tr><td>A notes app</td><td>Excellent storage, and organising is the user's job. That's precisely the step that gets skipped at the moment of saving, which is when you're mid-scroll and least willing to file anything. Any tool that asks me to organise recreates the problem.</td></tr>
-    <tr><td>A read-later app</td><td>Built around articles and a reading queue. Most of what I save isn't an article — it's a screenshot, a PDF, a chat message, a post. And it still answers "what have I not read", not "where's that thing about stakeholder conflict".</td></tr>
+    <tr><td>A read-later app</td><td>Built around articles and a reading queue. Most of what I save isn't an article. It's a screenshot, a PDF, a chat message, a post. And the question it answers is "what have I not read yet", when mine is "where's that thing about stakeholder conflict".</td></tr>
     <tr><td>A highlights tool</td><td>Strong at capturing passages out of things you read. It still assumes you know which source to go back to; the search is over sources, and my problem starts before I know which source it is.</td></tr>
-    <tr><td>A general AI chatbot</td><td>Can absolutely answer questions about a document you hand it. The gap is persistence — every session starts empty, so the library never accumulates, nothing gets deduplicated, and nothing carries state like "already read" or "starred". A conversation isn't a corpus.</td></tr>
-    <tr><td>Platform search</td><td>Saved posts stay on the platform that hosted them, so there are five searches instead of one — each keyword-only, none aware of the others.</td></tr>
+    <tr><td>A general AI chatbot</td><td>Can absolutely answer questions about a document you hand it. The gap is persistence. Every session starts empty, so the library never accumulates, nothing gets deduplicated, and nothing carries state like "already read" or "starred". A conversation isn't a corpus.</td></tr>
+    <tr><td>Platform search</td><td>Saved posts stay on whichever platform hosted them, so there are five searches instead of one. Each is keyword-only, and none of them know about the others.</td></tr>
   </tbody>
 </table>
 
 <div class="callout">
   <div class="label">The gap this fills</div>
-  <p>Every option above is strong at one of <em>accept anything</em>, <em>understand it without
-  being asked</em>, or <em>answer across all of it with citations</em>. The product exists because
-  the value is in doing all three to the same pile — the understanding has to happen at save time,
-  or the retrieval has nothing to work with later.</p>
+  <p>Each option above is strong at one of three things: <em>accept anything</em>, <em>understand it
+  without being asked</em>, <em>answer across all of it with citations</em>. The value is in doing
+  all three to the same pile, and they depend on each other. Understanding has to happen at save
+  time, or retrieval has nothing to work with later.</p>
 </div>
 
 <h2 id="journey">The journey, and where it still hurts</h2>
-<p>Four moments matter. Each one names what the product does and, honestly, what friction is left.</p>
+<p>Four moments matter. For each one, what the product does, and what friction is still there.</p>
 
 <div style="margin:26px 0">
   <div class="step">
     <div class="n">1</div>
     <div>
-      <h4>Encounter — something worth keeping, mid-scroll</h4>
-      <p>On a phone, inside LinkedIn or a group chat. The window for saving is a few seconds wide;
-      anything more elaborate and the thing is lost.</p>
+      <h4>Encounter: something worth keeping, mid-scroll</h4>
+      <p>On a phone, inside LinkedIn or a group chat. The window for saving is a few seconds wide.
+      Anything more elaborate than that and the thing is simply lost.</p>
       <span class="friction">Still friction: copy → switch app → paste</span>
       <p style="margin-top:8px;font-size:14.5px;color:var(--soft)">This is the one step the MVP
-      doesn't fix, and the reason share-sheet ingestion is first on the roadmap.</p>
+      doesn't fix, which is why share-sheet ingestion sits first on the roadmap.</p>
     </div>
   </div>
   <div class="step">
     <div class="n">2</div>
     <div>
-      <h4>Save — hand it over and stop thinking</h4>
-      <p>Paste, upload or drop in a chat export. Extraction, classification, summarisation,
-      embedding and a duplicate check all run before anything is written, and the result is shown
-      for approval with every field editable.</p>
+      <h4>Save: hand it over and stop thinking</h4>
+      <p>Paste, upload, or drop in a chat export. Extraction, classification, summarisation,
+      embedding and a duplicate check all run before anything is written. The result comes back for
+      approval with every field editable.</p>
       <span class="solved">No filing, no folders, no naming</span>
     </div>
   </div>
   <div class="step">
     <div class="n">3</div>
     <div>
-      <h4>Return — days later, half-remembering</h4>
-      <p>Either browse the Library, where each card carries a gist, a type and a read time so
-      relevance is judgeable without opening anything — or ask a question in plain language and let
-      retrieval find it.</p>
-      <span class="solved">Semantic search, not keyword recall</span>
+      <h4>Return: days later, half-remembering</h4>
+      <p>Two ways in. Browse the Library, where every card carries a gist, a type and a read time,
+      so you can judge relevance without opening anything. Or ask a question in plain language and
+      let retrieval do the finding.</p>
+      <span class="solved">Semantic search over keyword recall</span>
     </div>
   </div>
   <div class="step">
     <div class="n">4</div>
     <div>
-      <h4>Verify — decide whether to trust the answer</h4>
-      <p>Every answer carries numbered citations. Expanding one shows the exact passage it drew on;
-      opening it lands on the original save, where it can be read, highlighted and annotated.</p>
-      <span class="solved">Checkable, not just plausible</span>
+      <h4>Verify: decide whether to trust the answer</h4>
+      <p>Every answer carries numbered citations. Expand one and you get the exact passage it drew
+      on. Open it and you land on the original save, where it can be read, highlighted and
+      annotated.</p>
+      <span class="solved">Every claim traceable to a source</span>
     </div>
   </div>
 </div>
@@ -389,49 +401,49 @@ it's worth being precise about why rather than waving at "existing tools don't d
   <img src="/prd-case-study/02-library-grid.jpg" alt="The Library: a grid of saved items, each card styled by content type" loading="lazy" />
   <figcaption><b>Every card knows what it is.</b> A PDF shows its rendered first page, a
   screenshot shows the image, a LinkedIn post shows the author and its preview, a chat import
-  shows the WhatsApp mark. Nothing here is a generic file icon — you should recognise a save
-  without reading it. Metrics like page count and read time come from stored values, and a card
-  omits any it doesn't have rather than printing a zero.</figcaption>
+  shows the WhatsApp mark. None of it is a generic file icon, because you should be able to
+  recognise a save without reading it. Numbers like page count and read time come from stored
+  values, and a card leaves out any it doesn't have rather than printing a zero.</figcaption>
 </figure>
 
 <figure>
   <img src="/prd-case-study/09-add-review.jpg" alt="The Add Content review step showing AI-suggested title, category and key points" loading="lazy" />
   <figcaption><b>The AI proposes, you approve.</b> Adding something runs extraction, classification,
-  summarisation, embedding and a duplicate check — then stops and shows you the result. Every
-  field is editable, and an <code>AI</code> chip marks what the model wrote and disappears the
-  moment you change it.</figcaption>
+  summarisation, embedding and a duplicate check, then stops and shows you what it came up with.
+  Every field is editable. An <code>AI</code> chip marks what the model wrote, and it disappears
+  the moment you change that field.</figcaption>
 </figure>
 
 <figure>
   <img src="/prd-case-study/06-chat-cited.jpg" alt="Ask My Vault answering a question with numbered citations and source cards" loading="lazy" />
   <figcaption><b>Answers you can check.</b> Ask My Vault retrieves from your own saves and answers
-  in structured sections, with inline markers pointing at numbered sources. Expanding a source
-  shows the exact passage the answer drew on — not the item's summary, which is a different
-  sentence written for a different purpose.</figcaption>
+  in structured sections, with inline markers pointing at numbered sources. Expand a source and you
+  get the exact passage the answer drew on. Not the item's summary, which is a different sentence
+  written for a different purpose.</figcaption>
 </figure>
 
 <figure>
   <img src="/prd-case-study/10-mobile-library.jpg" alt="The library on a phone, with a bottom navigation bar" loading="lazy" style="max-width:330px;margin:0 auto" />
   <figcaption style="text-align:center"><b>Built for where saving actually happens.</b> The sidebar
-  collapses to a bottom bar; cards reflow to a single column.</figcaption>
+  collapses to a bottom bar and cards reflow to a single column.</figcaption>
 </figure>
 
 <h2 id="ia">Information architecture</h2>
 
-<p>Five destinations, and one decision underneath them that everything else follows from.</p>
+<p>Five destinations, plus one decision underneath them that everything else follows from.</p>
 
-<div class="tree"><b>Dashboard</b>      <span>— counts, recent saves, continue a conversation</span>
-<b>Library</b>        <span>— everything, filtered by category / source / date / duplicates</span>
-  └ <b>Item</b>       <span>— the content, its AI summary, highlights, related items</span>
-<b>Ask My Vault</b>   <span>— conversations, each answer cited back into the Library</span>
-<b>Favorites</b>      <span>— the starred subset, with study actions over it</span>
-<b>Settings</b>       <span>— account, defaults, data</span></div>
+<div class="tree"><b>Dashboard</b>      <span>: counts, recent saves, continue a conversation</span>
+<b>Library</b>        <span>: everything, filtered by category / source / date / duplicates</span>
+  └ <b>Item</b>       <span>: the content, its AI summary, highlights, related items</span>
+<b>Ask My Vault</b>   <span>: conversations, each answer cited back into the Library</span>
+<b>Favorites</b>      <span>: the starred subset, with study actions over it</span>
+<b>Settings</b>       <span>: account, defaults, data</span></div>
 
 <h3>The item is the atom</h3>
-<p>A WhatsApp export doesn't become one saved item — it becomes one item <em>per message</em>. A
-40-message chat holding three useful ideas would otherwise be a single unsearchable blob, and
-retrieval would return the whole conversation when you wanted one paragraph of it. Splitting at
-ingest is what lets a citation point at something small enough to check.</p>
+<p>A WhatsApp export doesn't become one saved item. It becomes one item <em>per message</em>.
+Otherwise a 40-message chat containing three useful ideas is a single unsearchable blob, and
+retrieval hands you the whole conversation when what you wanted was one paragraph of it. Splitting
+at ingest is what lets a citation point at something small enough to actually check.</p>
 
 <h3>Two kinds of label, on purpose</h3>
 <table>
@@ -439,43 +451,45 @@ ingest is what lets a citation point at something small enough to check.</p>
   <tbody>
     <tr><td>Who sets them</td><td>The AI, from a fixed list; the user can override</td><td>The user, freely</td></tr>
     <tr><td>How many</td><td>One to three per item, never zero</td><td>Any</td></tr>
-    <tr><td>Why</td><td>A closed list is what makes the filter rail trustworthy — an open one produces "Product Sense", "Product-Sense" and "PS" within a week</td><td>Personal structure the taxonomy can't anticipate; favourites are implemented as one</td></tr>
+    <tr><td>Why</td><td>A closed list is what makes the filter rail trustworthy. An open one gives you "Product Sense", "Product-Sense" and "PS" within a week</td><td>Personal structure the taxonomy can't anticipate. Favourites are implemented as one</td></tr>
   </tbody>
 </table>
 
 <div class="callout">
   <div class="label">Never zero</div>
   <p>Every item lands in at least one category, falling back to <code>Other</code> if the model
-  won't commit. An uncategorised bucket sounds harmless and is where things go to be forgotten —
-  which is the entire problem this product exists to fix.</p>
+  won't commit. An uncategorised bucket sounds harmless enough, but it's exactly where things go to
+  be forgotten, and being forgotten is the whole problem this product exists to fix.</p>
 </div>
 
 <h2 id="decisions">Decisions that shaped it</h2>
-<p>The interesting part of this project isn't the feature list — it's what got argued down.</p>
+<p>The feature list is the least interesting part of this project. What got argued down is where
+the thinking actually shows.</p>
 
 <div class="decision">
   <span class="tag">Decision 01</span>
-  <h3>RAG, not fine-tuning — and not keyword search</h3>
-  <p>Three options for "find the right thing fast". Keyword search fails on the exact query people
-  actually have, because you remember a post's <em>idea</em>, not its vocabulary. Fine-tuning a
-  model on a personal library that changes every day means retraining to make one new save
-  findable — the cost is wrong for the use case.</p>
-  <p>Retrieval-augmented generation fits the shape of the problem: a new save is queryable the
-  moment it's embedded, and answers are grounded in the user's own material with citations
-  attached. <strong>The point is trustworthy recall of your own content, not general knowledge.</strong>
-  That framing became the tiebreaker for later decisions too — anything trading citation accuracy
-  for convenience got rejected.</p>
+  <h3>RAG rather than fine-tuning or keyword search</h3>
+  <p>There were three ways to do "find the right thing fast". Keyword search falls over on the exact
+  query people actually have, because what you remember is a post's <em>idea</em> and not its
+  vocabulary. Fine-tuning has a different problem: on a personal library that changes every day,
+  making one new save findable means retraining. The cost is simply wrong for the use case.</p>
+  <p>Retrieval-augmented generation fits the shape of the problem. A new save is queryable the
+  moment it's embedded, and answers stay grounded in the user's own material with citations
+  attached. <strong>What matters here is trustworthy recall of your own content, not general
+  knowledge.</strong> That framing ended up being the tiebreaker for later decisions as well.
+  Anything that traded citation accuracy for convenience got rejected on those grounds.</p>
 </div>
 
 <div class="decision">
   <span class="tag">Decision 02</span>
   <h3>Nothing is written until you confirm</h3>
-  <p>The natural way to build ingestion is to save the row, then enrich it in the background. I
-  built the opposite: <code>/analyze</code> performs every AI operation against an in-memory
-  buffer and persists nothing at all; <code>/commit</code> is the only endpoint that writes.</p>
-  <p>Two reasons. An abandoned add should leave nothing behind — half the point of this product is
-  not accumulating junk. And the duplicate check is only useful <em>before</em> you save; telling
-  someone they've just created a duplicate is a notification, not a feature.</p>
+  <p>The natural way to build ingestion is to save the row first and enrich it in the background.
+  I built the opposite. <code>/analyze</code> runs every AI operation against an in-memory buffer
+  and persists nothing at all, and <code>/commit</code> is the only endpoint that writes.</p>
+  <p>Two reasons for that. An abandoned add should leave nothing behind, since half the point of
+  this product is not accumulating junk in the first place. And a duplicate check is only useful
+  <em>before</em> you save. Telling someone they have just created a duplicate is a notification
+  rather than a feature.</p>
 </div>
 
 <div class="decision">
@@ -484,8 +498,9 @@ ingest is what lets a citation point at something small enough to check.</p>
   <p>Most of what I save is on LinkedIn, and automating that import would be the single most
   useful feature. Scraping your own saved posts violates LinkedIn's terms of service, so the app
   takes a pasted URL or pasted text and nothing else.</p>
-  <p>This costs real convenience. I wrote it into the brief as a locked constraint before building
-  so it couldn't be quietly relitigated at 1am when the manual flow felt tedious.</p>
+  <p>This costs real convenience, and I knew it would. Writing it into the brief as a locked
+  constraint before building was the point: it meant I couldn't quietly relitigate it at 1am when
+  the manual flow started feeling tedious.</p>
 </div>
 
 <div class="decision">
@@ -493,12 +508,13 @@ ingest is what lets a citation point at something small enough to check.</p>
   <h3>Cutting a feature I'd already specced</h3>
   <p>Resurfacing was core feature #7 in my own brief: items untouched for 14 days appear in a
   "revisit" widget. Six of the seven features shipped. I cut the seventh.</p>
-  <p>Not because it was hard — it was the cheapest thing left, two rules over a timestamp. I cut it
-  because <strong>surfacing items on an age rule guesses at intent the product has no evidence
-  for.</strong> "You saved this a fortnight ago" isn't a reason to read something. Retrieval already
-  answers "find the right thing fast"; a widget nagging about old saves answers a question nobody
-  asked. It goes back on the roadmap when usage shows people hunting for things they forgot they
-  had — and I've written down what that evidence would look like.</p>
+  <p>Not because it was hard. It was the cheapest thing left on the list, two rules over a
+  timestamp. I cut it because <strong>surfacing items on an age rule guesses at intent the product
+  has no evidence for.</strong> "You saved this a fortnight ago" isn't a reason to read something.
+  Retrieval already answers "find the right thing fast", and a widget nagging about old saves
+  answers a question nobody asked. It goes back on the roadmap the moment usage shows people
+  hunting for things they'd forgotten they had, and I've written down what that evidence would
+  look like.</p>
 </div>
 
 <div class="decision">
@@ -507,20 +523,20 @@ ingest is what lets a citation point at something small enough to check.</p>
   <p>Every piece runs on a free tier: Supabase for Postgres, pgvector, auth and storage; Vercel for
   hosting and serverless functions; Google Gemini for generation and embeddings; OCR and PDF
   rendering in the browser, where they cost nothing.</p>
-  <p>That constraint drove architecture rather than just billing. Uploads cap at 4MB because a
-  serverless function rejects a larger body before my code runs, so a higher limit would only turn
-  a clear message into an opaque failure. A daily cron pings the database because free Supabase
-  projects pause when idle — and a portfolio link is most likely to be opened by exactly the person
-  you least want waiting for a cold start.</p>
+  <p>That constraint shaped the architecture, not just the bill. Uploads cap at 4MB because a
+  serverless function rejects a larger body before my code ever runs, so a higher limit would only
+  swap a clear message for an opaque failure. A daily cron pings the database because free Supabase
+  projects pause when they go idle, and a portfolio link is most likely to be opened by exactly the
+  person you least want waiting on a cold start.</p>
 </div>
 
 <h2 id="ai">AI architecture</h2>
 
-<p>Two AI paths, deliberately separated: one runs when content arrives, the other when a question
-is asked. They share an embedding model and nothing else.</p>
+<p>There are two AI paths and they are deliberately kept apart. One runs when content arrives, the
+other when a question gets asked. They share an embedding model and nothing else.</p>
 
 <div class="flow">
-  <div class="fphase">Ingestion — when content arrives</div>
+  <div class="fphase">Ingestion: when content arrives</div>
   <ol>
     <li><div class="fbox"><b>Save content</b> <em>paste · upload · chat export</em></div></li>
     <li class="farr">↓</li>
@@ -534,7 +550,7 @@ is asked. They share an embedding model and nothing else.</p>
     <li class="farr">↓</li>
     <li><div class="fbox db"><b>Vector database</b> <em>pgvector · dedup check</em></div></li>
   </ol>
-  <div class="fphase">Retrieval — when a question is asked</div>
+  <div class="fphase">Retrieval: when a question is asked</div>
   <ol>
     <li><div class="fbox"><b>Ask My Vault</b> <em>question embedded, top matches retrieved</em></div></li>
     <li class="farr">↓</li>
@@ -544,12 +560,11 @@ is asked. They share an embedding model and nothing else.</p>
 
 <h3>What each stage does</h3>
 <ul>
-  <li><b>Extraction is per type</b> — sanitised HTML for a note, Tesseract.js OCR in the browser for a screenshot, <code>pdf-parse</code> for a document plus pdf.js rasterising page 1 as cover art, a parser that splits a chat export into one item per message, and an HTML fetch with metadata parsing for a link.</li>
-  <li><b>Classification and summarisation are one call</b> — Gemini returns strict JSON: category from the fixed list, a short title and subtitle, a 1–2 line summary and 3–5 key points. The response is defended rather than trusted: malformed JSON is recovered, arrays coerced, and an empty response raises instead of saving a blank.</li>
-  <li><b>Duplicate detection reuses the embedding</b> — cosine similarity against existing items, surfaced <em>before</em> saving, when it can still change your mind.</li>
-  <li><b>Nothing is written until the review step is confirmed.</b> Everything above runs against a buffer; abandon at review and no row was ever created.</li>
+  <li><b>Extraction is per type.</b> Sanitised HTML for a note. Tesseract.js OCR in the browser for a screenshot. <code>pdf-parse</code> for a document, plus pdf.js rasterising page 1 as cover art. A parser that splits a chat export into one item per message, and an HTML fetch with metadata parsing for a link.</li>
+  <li><b>Classification and summarisation happen in one call.</b> Gemini returns strict JSON: category from the fixed list, a short title and subtitle, a 1 to 2 line summary, and 3 to 5 key points. The response is defended rather than trusted, so malformed JSON gets recovered, arrays get coerced, and an empty response raises instead of quietly saving a blank.</li>
+  <li><b>Duplicate detection reuses that embedding.</b> Cosine similarity against existing items, surfaced <em>before</em> saving, while it can still change your mind.</li>
   <li><b>Only referenced sources become citations.</b> Retrieval returns the top matches; the answer cites some of them. Attaching all would inflate the "used N sources" claim into something untrue.</li>
-  <li><b>Citations keep their index and their passage</b>, so a reopened conversation still agrees with its own text — and the exact passage an answer leaned on stays checkable.</li>
+  <li><b>Citations keep their index and their passage</b>, so a reopened conversation still agrees with its own text and the exact passage an answer leaned on stays checkable.</li>
 </ul>
 
 <h3>Designing for the model failing</h3>
@@ -557,70 +572,70 @@ is asked. They share an embedding model and nothing else.</p>
 <table>
   <thead><tr><th>Failure</th><th>Response</th></tr></thead>
   <tbody>
-    <tr><td>Model overloaded (503)</td><td>Retry with backoff, then fall back across models — another lightweight model first, full Flash last, because its free-tier allowance is roughly 20 requests/day</td></tr>
+    <tr><td>Model overloaded (503)</td><td>Retry with backoff, then fall back across models. Another lightweight model first, full Flash last, because its free-tier allowance is roughly 20 requests a day</td></tr>
     <tr><td>Daily quota exhausted (429)</td><td>A distinct error, because the advice differs: wait a minute versus wait until tomorrow</td></tr>
     <tr><td>Malformed JSON</td><td>Recovered field by field rather than discarding the whole response</td></tr>
-    <tr><td>Classification fails entirely</td><td>The save still proceeds — the item lands with editable fields. The AI is an accelerator, not a gate</td></tr>
-    <tr><td>Embedding fails</td><td>Retried, because an item without a vector is silently invisible to search and skips dedup — worse than a visible missing summary</td></tr>
+    <tr><td>Classification fails entirely</td><td>The save still goes through and the item lands with editable fields. The AI accelerates this flow; it doesn't gate it</td></tr>
+    <tr><td>Embedding fails</td><td>Retried. An item without a vector is silently invisible to search and skips dedup, which is worse than a visibly missing summary</td></tr>
   </tbody>
 </table>
 
 <div class="callout">
   <div class="label">The principle underneath</div>
-  <p>Every one of these degrades toward <em>the user still gets their content saved</em>. The
-  feature that must never degrade is the citation: an answer that can't be checked is worse than
-  no answer, because it looks the same as one that can.</p>
+  <p>Every one of these degrades toward the same outcome: <em>the user still gets their content
+  saved</em>. The one thing that must never degrade is the citation. An answer you can't check is
+  worse than no answer at all, because it looks exactly like one you can.</p>
 </div>
 
 <h2 id="broke">What broke, and what I changed</h2>
-<p>Four failures worth keeping, because each one changed how I think about shipping AI features.</p>
+<p>Four failures worth writing down. Each one changed how I think about shipping AI features.</p>
 
 <details>
   <summary>The app blamed the user for Google's outage</summary>
   <p>Adding content started failing with <em>"The AI couldn't read this one."</em> The content was
-  fine. Google's <code>gemini-flash-lite</code> was returning <code>503 — high demand</code> on
-  five consecutive calls.</p>
-  <p>Three separate mistakes compounded: the code used one model with no fallback, gave up on the
-  first failure with no retry, and logged nothing — so a sustained upstream outage was
-  indistinguishable from unreadable content, with no trace anywhere to tell them apart. Worst of
-  all, the message blamed the user's input for someone else's traffic spike.</p>
+  perfectly fine. Google's <code>gemini-flash-lite</code> was returning <code>503, high demand</code>
+  on five consecutive calls.</p>
+  <p>Three separate mistakes compounded here. The code used one model with no fallback. It gave up
+  on the first failure with no retry. And it logged nothing, so a sustained upstream outage looked
+  identical to unreadable content with no trace anywhere to tell them apart. Worst of all, the
+  message blamed the user's input for someone else's traffic spike.</p>
   <p><b>Now:</b> retry with backoff, a fallback chain across models, every failure logged, and a
-  distinct error for "the service is busy" versus "you're out of quota" — because the advice
-  differs. The fallback order is deliberate: another lightweight model comes before full Flash,
-  which allows only ~20 requests/day on the free tier, so leading with it would trade a short
-  outage for an exhausted daily quota.</p>
+  distinct error for "the service is busy" versus "you're out of quota", because the advice
+  differs. The fallback order is deliberate. Another lightweight model comes before full Flash,
+  which allows only about 20 requests a day on the free tier, so leading with it would trade a
+  short outage for an exhausted daily quota.</p>
 </details>
 
 <details>
   <summary>A citation that pointed at the wrong number</summary>
   <p>An answer's inline markers count an item's position in the <em>retrieved</em> set, so a turn
-  citing only the fourth match legitimately reads <code>[4]</code>. But reopening a saved
-  conversation renumbered the sources from 1 — so the text said <code>[4]</code> beside a source
-  card labelled <code>1</code>.</p>
-  <p>Worse, the restored view showed the item's <em>summary</em> in place of the passage the answer
-  had actually used. For a product whose whole promise is checkable answers, a citation you can't
-  verify is the failure that matters most.</p>
-  <p><b>Now:</b> citations are stored with their index and the retrieved passage, not just an item
-  id. The item itself is still looked up live, so edits show current and deletions drop out
-  cleanly.</p>
+  citing only the fourth match legitimately reads <code>[4]</code>. Reopening a saved conversation
+  renumbered the sources from 1, which meant the text said <code>[4]</code> next to a source card
+  labelled <code>1</code>.</p>
+  <p>Worse, the restored view showed the item's <em>summary</em> where the passage the answer had
+  actually used should have been. For a product whose whole promise is checkable answers, a
+  citation you can't verify is the failure that matters most.</p>
+  <p><b>Now:</b> citations are stored with their index and the retrieved passage rather than just
+  an item id. The item itself is still looked up live, so edits show their current state and
+  deletions drop out cleanly.</p>
 </details>
 
 <details>
   <summary>A bug that only production would have found</summary>
-  <p>Between analysing and saving, extracted text is held in memory. If that cache misses, commit
-  re-extracts — sensible. But it kept only the text and discarded the metadata alongside it,
-  which meant a note could save <strong>with no body at all</strong>, a link with no preview
+  <p>Between analysing and saving, extracted text sits in memory. If that cache misses, commit
+  re-extracts, which is sensible enough. But it kept only the text and threw away the metadata
+  alongside it, so a note could save <strong>with no body at all</strong>, a link with no preview
   image, a PDF with no page count.</p>
-  <p>Locally this fired only if you left the review step open for fifteen minutes. On serverless,
-  analyse and commit aren't guaranteed to hit the same instance — the rare path becomes the
-  common one. I found it while reading the code for deployment, before it ever ran.</p>
+  <p>Locally this only fired if you left the review step open for fifteen minutes. On serverless,
+  analyse and commit aren't guaranteed to land on the same instance, so the rare path becomes the
+  common one. I caught it while reading the code for deployment, before it ever ran.</p>
 </details>
 
 <details>
   <summary>Every uploaded file was publicly readable</summary>
-  <p>The storage bucket was public. Any PDF or screenshot was readable by anyone holding the URL,
-  no session required. Harmless while it ran on my laptop; not harmless the moment it had a public
-  address.</p>
+  <p>The storage bucket was public. Any PDF or screenshot could be read by anyone holding the URL,
+  no session required. That was harmless while the thing ran on my laptop. It stopped being
+  harmless the moment it had a public address.</p>
   <p><b>Now:</b> the bucket is private and every file link is signed with a two-hour expiry. The
   path parser reads both the old public URLs and the new object paths, so flipping it needed no
   data migration.</p>
@@ -628,20 +643,20 @@ is asked. They share an embedding model and nothing else.</p>
 
 <h2 id="learnings">What I'd take to the next build</h2>
 
-<p>Six things I believe more strongly now than when I started, each one paid for by something in
-this project going wrong.</p>
+<p>Six things I believe more strongly now than when I started. Each one was paid for by something
+in this project going wrong.</p>
 
 <h3>1. An AI feature's error message is part of the feature</h3>
 <p>When Gemini went down, the app said <em>"The AI couldn't read this one."</em> The content was
 perfectly readable; Google was overloaded. That sentence sends a user off editing input that was
-never the problem. Failure copy has to name the layer that actually failed — and if the system
-can't tell which layer that was, that's a logging gap, not a wording one.</p>
+never the problem. Failure copy has to name the layer that actually failed. And if the system
+can't tell you which layer that was, you have a logging gap rather than a wording one.</p>
 
 <h3>2. A citation is a promise, and the bar is verification</h3>
 <p>Citations that looked right were subtly wrong twice: renumbered on reopen so the text disagreed
 with its own sources, and showing an item's summary in place of the passage the answer used.
 Neither would fail a test or look broken. For a product whose whole claim is grounded answers,
-<strong>"looks cited" is not the standard — "can be checked" is.</strong></p>
+the standard isn't <strong>"looks cited"</strong>. It's <strong>"can be checked"</strong>.</p>
 
 <h3>3. Constraints did more for scope than any prioritisation framework</h3>
 <p>A hard $0 budget and LinkedIn's terms of service each removed whole branches of the tree before
@@ -649,12 +664,12 @@ I could argue with myself about them. Writing them down as locked decisions befo
 they held at 1am when the manual paste flow felt tedious. <strong>The constraints I wrote down
 survived; the preferences I merely held did not.</strong></p>
 
-<h3>4. Cutting a specced feature is a decision, not an admission</h3>
+<h3>4. Cutting a specced feature is itself a decision</h3>
 <p>Resurfacing was in my own brief and was the cheapest thing left to build. I cut it because
 surfacing items on an age rule guesses at intent I had no evidence for. The uncomfortable part
-wasn't the analysis — it was that I'd already written it down, and written-down plans acquire
-gravity. Being able to say <em>why</em> it's cut, with the evidence that would bring it back, is
-worth more than shipping it.</p>
+wasn't the analysis. It was that I'd already written the thing down, and written-down plans
+acquire a gravity of their own. Being able to say <em>why</em> it was cut, along with the evidence
+that would bring it back, is worth more than having shipped it.</p>
 
 <h3>5. Working locally proves less than it feels like it proves</h3>
 <p>One bug would have corrupted saves in production while being nearly invisible in development:
@@ -664,17 +679,17 @@ requests hit different instances, it becomes the normal path. <strong>Deployment
 environment, not just a different address.</strong></p>
 
 <h3>6. Security posture belongs before the URL, not after</h3>
-<p>Every uploaded file sat in a public bucket — fine on a laptop, not fine the moment the app had
-a public address. Making it private and signing every link took under an hour, and it was the
-thing I'd have been most embarrassed to be asked about. <strong>The moment something becomes
-reachable is the moment its weakest assumption becomes a real one.</strong></p>
+<p>Every uploaded file sat in a public bucket. Fine on a laptop. Not fine the moment the app had a
+public address. Making it private and signing every link took under an hour, and it was the thing
+I'd have been most embarrassed to be asked about in an interview. <strong>The moment something
+becomes reachable is the moment its weakest assumption becomes a real one.</strong></p>
 
 <div class="callout ok">
   <div class="label">The one that generalises</div>
-  <p>Most of these are the same lesson wearing different clothes: <strong>an AI product's hard
-  parts sit around the model, not in it.</strong> The prompt was a day's work. Retries, fallbacks,
-  honest failure states, verifiable citations, and knowing what to do when the model returns
-  nonsense — that was the rest of the week, and it's what decides whether anyone trusts the
+  <p>Most of these are the same lesson wearing different clothes. <strong>An AI product's hard
+  parts sit around the model rather than in it.</strong> The prompt was a day's work. Retries,
+  fallbacks, honest failure states, verifiable citations, and knowing what to do when the model
+  returns nonsense took the rest of the week. That part is what decides whether anyone trusts the
   output.</p>
 </div>
 
@@ -683,8 +698,8 @@ reachable is the moment its weakest assumption becomes a real one.</strong></p>
 <div class="callout">
   <div class="label">Defined before there was anything to measure</div>
   <p>These were written ahead of launch, so what counts as success isn't retrofitted to whatever
-  the numbers happen to say later. Each metric names <strong>the failure it would expose</strong>,
-  not just the thing it counts — which is what makes it possible to be wrong.</p>
+  the numbers happen to say later. Each metric names <strong>the failure it would expose</strong>
+  rather than just the thing it counts, which is what makes it possible to be wrong.</p>
 </div>
 
 <h3>The four numbers I care about</h3>
@@ -709,7 +724,7 @@ reachable is the moment its weakest assumption becomes a real one.</strong></p>
 
 <div class="callout ok">
   <div class="label">What would change my mind</div>
-  <p>If three of five describe hunting for something they knew they'd saved and giving up, <strong>resurfacing goes back in</strong> — and it should be triggered by what they were looking for, not by how old it is.</p>
+  <p>If three of five describe hunting for something they knew they'd saved and then giving up, <strong>resurfacing goes back in</strong>. And it should be triggered by what they were looking for rather than by how old the item is.</p>
   <p>If nobody clicks a citation, the trust model is wrong and the answer format needs rebuilding around the source rather than the prose.</p>
 </div>
 
@@ -718,46 +733,46 @@ reachable is the moment its weakest assumption becomes a real one.</strong></p>
 <table>
   <tbody>
     <tr><td>Frontend</td><td>React (Vite) + Tailwind, deployed on Vercel</td></tr>
-    <tr><td>API</td><td>Express, running as a Vercel serverless function on the same domain — so the frontend and API are same-origin and no CORS exists in production</td></tr>
+    <tr><td>API</td><td>Express, running as a Vercel serverless function on the same domain, so the frontend and API are same-origin and no CORS exists in production</td></tr>
     <tr><td>Database</td><td>Supabase Postgres with <code>pgvector</code> for similarity search</td></tr>
-    <tr><td>Auth</td><td>Supabase Auth — Google plus email/password; every table carries <code>user_id</code> and row-level security</td></tr>
+    <tr><td>Auth</td><td>Supabase Auth, Google plus email/password. Every table carries <code>user_id</code> and row-level security</td></tr>
     <tr><td>AI</td><td>Gemini for classification, summarisation and answers; <code>gemini-embedding-001</code> at 768 dimensions for retrieval</td></tr>
-    <tr><td>In the browser</td><td>Tesseract.js for screenshot OCR, pdf.js to rasterise a PDF's first page — both free and off the server</td></tr>
+    <tr><td>In the browser</td><td>Tesseract.js for screenshot OCR, pdf.js to rasterise a PDF's first page. Both free, and both off the server</td></tr>
   </tbody>
 </table>
 
 <p>Two choices worth calling out. <b>The API is a serverless function on the same domain as the
-frontend</b>, so production has no cross-origin requests at all — CORS exists only for local
+frontend</b>, so production has no cross-origin requests at all and CORS exists only for local
 development. And <b>OCR and PDF rendering run in the browser</b>, which keeps them off the
 server's clock and off the bill entirely.</p>
 
 <hr class="rule" />
 
 <div class="prd-open">
-  <h2 id="prd" style="margin-top:6px">Product Requirements — MVP</h2>
+  <h2 id="prd" style="margin-top:6px">Product Requirements: MVP</h2>
   <p style="margin-bottom:0">This is the brief the build was actually run against, written before
   the first commit rather than reconstructed afterwards. It's the reason the scope decisions above
-  have dates and rationale attached — they were argued once, written down, and then honoured.</p>
+  have dates and rationale attached. They were argued once, written down, and then honoured.</p>
 </div>
 
 <h3>1. Problem &amp; opportunity</h3>
 <p>Self-directed learning material is saved across LinkedIn, group chats and bookmarks with good
 intent, then rarely revisited. Even on a revisit it's hard to judge relevance without re-reading,
 or to find the right item at all. Saved effort quietly gets wasted. The MVP addresses this for Product
-Management learners, whose content types and vocabulary are predictable enough to classify well —
-the initial learning domain rather than the intended limit.</p>
+Management learners, whose content types and vocabulary are predictable enough to classify well.
+That is the initial learning domain rather than the intended limit.</p>
 <p>This has an architectural consequence: summaries are stored <em>alongside</em> full content
 rather than generated on demand, and "find the right thing fast" is prioritised over "store
-everything" — a plain folder app already does the latter.</p>
+everything", since a plain folder app already does the latter.</p>
 
 <h3>2. Target user</h3>
-<p><b>Long-term:</b> anyone who saves content to learn from later — self-directed learners,
-career switchers, people ramping into a new role or domain.</p>
+<p><b>Long-term:</b> anyone who saves content to learn from later. Self-directed learners, career
+switchers, people ramping into a new role or domain.</p>
 <p><b>Initial audience (MVP):</b> Product Management learners. A large, well-defined first user
 segment with predictable content types and a shared vocabulary, which is what makes a fixed
 taxonomy and an accurate classifier possible at all.</p>
 <p><b>Deliberately not yet:</b> other roles and domains. Serving them is a taxonomy and
-onboarding problem rather than an architectural one — see the roadmap.</p>
+onboarding problem rather than an architectural one. See the roadmap.</p>
 
 <h3>3. Goals and non-goals</h3>
 <table>
@@ -772,9 +787,9 @@ onboarding problem rather than an architectural one — see the roadmap.</p>
 
 <h3>4. Scope decisions (locked before building)</h3>
 <ul>
-  <li><b>No live LinkedIn scraping.</b> Manual paste of post text or URL only — scraping saved posts violates LinkedIn's ToS.</li>
+  <li><b>No live LinkedIn scraping.</b> Manual paste of post text or URL only, because scraping saved posts violates LinkedIn's ToS.</li>
   <li><b>No live WhatsApp listening.</b> The user exports a chat with WhatsApp's own feature and uploads the <code>.txt</code>, which is parsed into individual items.</li>
-  <li><b>Single user for the MVP.</b> No sharing — but every table carries <code>user_id</code> from day one so multi-user isn't a rewrite.</li>
+  <li><b>Single user for the MVP.</b> No sharing, but every table carries <code>user_id</code> from day one so multi-user isn't a rewrite later.</li>
   <li><b>Resurfacing cut entirely</b> (2026-08-06, after the other six features shipped). See Decision 04.</li>
 </ul>
 
@@ -782,13 +797,13 @@ onboarding problem rather than an architectural one — see the roadmap.</p>
 <table>
   <thead><tr><th>#</th><th>Feature</th><th>Status</th></tr></thead>
   <tbody>
-    <tr><td>1</td><td>Manual ingestion — text, link, image (OCR), PDF, WhatsApp export, interview question, job posting</td><td>Shipped</td></tr>
+    <tr><td>1</td><td>Manual ingestion: text, link, image (OCR), PDF, WhatsApp export, interview question, job posting</td><td>Shipped</td></tr>
     <tr><td>2</td><td>Categorisation &amp; summarisation on ingest</td><td>Shipped</td></tr>
     <tr><td>3</td><td>Embedding generation into pgvector</td><td>Shipped</td></tr>
-    <tr><td>4</td><td>Library — list, filter, search, sort</td><td>Shipped</td></tr>
+    <tr><td>4</td><td>Library: list, filter, search, sort</td><td>Shipped</td></tr>
     <tr><td>5</td><td>RAG chatbot with citations back to the source item</td><td>Shipped</td></tr>
     <tr><td>6</td><td>Duplicate detection above a similarity threshold</td><td>Shipped</td></tr>
-    <tr><td>7</td><td>Resurfacing widget</td><td><b>Cut</b> — see Decision 04</td></tr>
+    <tr><td>7</td><td>Resurfacing widget</td><td><b>Cut</b>, see Decision 04</td></tr>
   </tbody>
 </table>
 
@@ -818,40 +833,40 @@ Application Tips · Frameworks · Industry News · Other.</p>
 
 <h3>9. What this project demonstrates</h3>
 <ul class="demo">
-  <li><span class="tick">▸</span><span><b>Problem definition</b> — diagnosing why saved content goes unused, and rejecting the obvious "better folders" answer</span></li>
-  <li><span class="tick">▸</span><span><b>MVP scoping and tradeoffs</b> — a deliberate first user segment, four locked constraints, one specced feature cut with its reasoning</span></li>
-  <li><span class="tick">▸</span><span><b>End-to-end AI product design</b> — ingestion, review, retrieval and verification as one experience</span></li>
-  <li><span class="tick">▸</span><span><b>RAG retrieval workflow</b> — extraction, embeddings, vector search and grounded generation, built rather than described</span></li>
-  <li><span class="tick">▸</span><span><b>Designing for trust</b> — citations that resolve to the exact passage used, and answers that degrade honestly when the model fails</span></li>
-  <li><span class="tick">▸</span><span><b>Feasibility against user value</b> — a $0 architecture, browser-side OCR, and limits chosen to fail with a clear message</span></li>
-  <li><span class="tick">▸</span><span><b>Independent delivery</b> — idea to deployed product, including auth, security posture and a live demo</span></li>
+  <li><span class="tick">▸</span><span><b>Problem definition</b>: diagnosing why saved content goes unused, and rejecting the obvious "better folders" answer</span></li>
+  <li><span class="tick">▸</span><span><b>MVP scoping and tradeoffs</b>: a deliberate first user segment, four locked constraints, one specced feature cut with its reasoning</span></li>
+  <li><span class="tick">▸</span><span><b>End-to-end AI product design</b>: ingestion, review, retrieval and verification as one experience</span></li>
+  <li><span class="tick">▸</span><span><b>RAG retrieval workflow</b>: extraction, embeddings, vector search and grounded generation, built rather than described</span></li>
+  <li><span class="tick">▸</span><span><b>Designing for trust</b>: citations that resolve to the exact passage used, and answers that degrade honestly when the model fails</span></li>
+  <li><span class="tick">▸</span><span><b>Feasibility against user value</b>: a $0 architecture, browser-side OCR, and limits chosen to fail with a clear message</span></li>
+  <li><span class="tick">▸</span><span><b>Independent delivery</b>: idea to deployed product, including auth, security posture and a live demo</span></li>
 </ul>
 
 <h3>10. Roadmap</h3>
 <p>Not built, and each one listed with the reason it isn't in the MVP rather than as a wish.</p>
 
-<h4>Next — the friction the MVP still leaves in</h4>
+<h4>Next: the friction the MVP still leaves in</h4>
 <table>
   <thead><tr><th>What</th><th>Why it matters</th></tr></thead>
   <tbody>
-    <tr><td>Share directly from any app</td><td>Every save is currently copy, switch app, paste. The mobile share sheet is where saving actually happens, and removing that step matters most of anything here — the premise is that saving stays effortless.</td></tr>
-    <tr><td>First-run onboarding</td><td>A new account opens onto an empty vault — nothing to search, nothing to ask. Onboarding should land one real item and one answered question before asking for trust.</td></tr>
-    <tr><td>Export the vault</td><td>What's saved here can only be read here. Export makes the tool safe to adopt, and belongs <em>inside</em> the reset and delete flows — a download offered before destroying a library is what makes the action reversible.</td></tr>
+    <tr><td>Share directly from any app</td><td>Every save is currently copy, switch app, paste. The mobile share sheet is where saving actually happens, and removing that step matters more than anything else here, because the whole premise is that saving stays effortless.</td></tr>
+    <tr><td>First-run onboarding</td><td>A new account opens onto an empty vault. Nothing to search, nothing to ask. Onboarding should land one real item and one answered question before asking anyone for trust.</td></tr>
+    <tr><td>Export the vault</td><td>What's saved here can only be read here. Export makes the tool safe to adopt, and it belongs <em>inside</em> the reset and delete flows. A download offered before destroying a library is what makes that action reversible.</td></tr>
     <tr><td>Browser extension</td><td>The desktop half of the same problem the share sheet solves.</td></tr>
   </tbody>
 </table>
 
-<h4>Then — beyond the first domain</h4>
+<h4>Then: beyond the first domain</h4>
 <table>
   <thead><tr><th>What</th><th>Why it matters</th></tr></thead>
   <tbody>
-    <tr><td>Any role, any domain</td><td>Nothing in ingestion, embedding, retrieval or citation is domain-specific — only the taxonomy is. Making categories configurable, or inferred from what someone saves, turns the MVP into a general learning system. Needs onboarding that asks what you're learning, and a classifier that works without a hand-written category list.</td></tr>
-    <tr><td>Practice mode</td><td>The saves already hold questions, frameworks and worked answers. Turning them into drills and spaced repetition is what separates a library from a study tool — and the most natural reason to return.</td></tr>
+    <tr><td>Any role, any domain</td><td>Nothing in ingestion, embedding, retrieval or citation is domain-specific. Only the taxonomy is. Making categories configurable, or inferring them from what someone saves, turns the MVP into a general learning system. It needs onboarding that asks what you're learning, and a classifier that works without a hand-written category list.</td></tr>
+    <tr><td>Practice mode</td><td>The saves already hold questions, frameworks and worked answers. Turning them into drills and spaced repetition is what separates a library from a study tool, and it's the most natural reason to come back.</td></tr>
     <tr><td>Collections</td><td>Grouping saves into a plan ("week 3: metrics") gives the vault a shape that a flat list and a category filter can't.</td></tr>
   </tbody>
 </table>
 
-<h4>Later — needs other people in it</h4>
+<h4>Later: needs other people in it</h4>
 <table>
   <thead><tr><th>What</th><th>Why it matters</th></tr></thead>
   <tbody>
@@ -864,12 +879,12 @@ Application Tips · Frameworks · Industry News · Other.</p>
   <div class="label">Sequencing</div>
   <p><b>Next</b> reduces friction on a product that already works; <b>Then</b> widens who it works
   for; <b>Later</b> needs users to connect, so it can't be pulled forward however appealing. The
-  one thing I would not build without evidence is resurfacing — see
+  one thing I would not build without evidence is resurfacing. See
   <a href="#decisions">Decision 04</a>.</p>
 </div>
 
 <footer>
-  <p><b>PM Content Vault</b> — built and shipped as a solo project, 2026.<br>
+  <p><b>PM Content Vault</b>: built and shipped as a solo project, 2026.<br>
   <a href="https://pm-content-vault.vercel.app" target="_blank" rel="noopener noreferrer">Live app</a> ·
   <a href="https://github.com/RADHIKA2909/pm-content-vault" target="_blank" rel="noopener noreferrer">Source</a> ·
   Demo login <code>demo@pmvault.app</code> / <code>PMVaultDemo2026!</code></p>
@@ -877,6 +892,50 @@ Application Tips · Frameworks · Industry News · Other.</p>
 
 </div>
 <script>
+  // Which section the nav should be pointing at.
+  //
+  // Measured from the sections' own positions on each scroll rather than from
+  // IntersectionObserver state. The observer only updates when a boundary is
+  // crossed, and this page scrolls smoothly, so during an animated jump the
+  // stored state is a frame or two behind and the nav lights the previous
+  // section. Reading nine rects is cheap and always agrees with what is on
+  // screen.
+  (function () {
+    var links = [].slice.call(document.querySelectorAll('nav a[href^="#"]:not(.home)'))
+    var pairs = links
+      .map(function (a) { return { link: a, section: document.getElementById(a.getAttribute('href').slice(1)) } })
+      .filter(function (p) { return p.section })
+    if (!pairs.length) return
+
+    var LINE = 80          // just below the sticky bar
+    var queued = false
+
+    function paint() {
+      queued = false
+      var current = null
+      pairs.forEach(function (p) {
+        if (p.section.getBoundingClientRect().top <= LINE) current = p
+      })
+      // Once the page bottoms out nothing new can cross the line, so the final
+      // section would never light up on its own.
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
+        current = pairs[pairs.length - 1]
+      }
+      links.forEach(function (a) { a.classList.remove('here') })
+      if (current) current.link.classList.add('here')
+    }
+
+    function schedule() {
+      if (queued) return
+      queued = true
+      requestAnimationFrame(paint)
+    }
+
+    addEventListener('scroll', schedule, { passive: true })
+    addEventListener('resize', schedule)
+    paint()
+  })()
+
   // The "what broke" sections are collapsed by default. Printing them shut
   // would put four headings on the page with nothing underneath, so they are
   // opened before the print view is composed — and closed again afterwards so
