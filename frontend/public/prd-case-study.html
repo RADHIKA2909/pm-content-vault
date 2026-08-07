@@ -301,7 +301,7 @@ What breaks comes afterwards, and there are three of them.</p>
   <div class="label">The insight this product is built on</div>
   <p>Storage was never the bottleneck. <strong>Retrieval and judgment</strong> were, which means a
   folder app solves a problem I don't have. Everything else follows from that: it's why summaries
-  get generated and stored the moment something is saved rather than on demand, and why semantic
+  get generated and stored the moment something is saved instead of on demand, and why semantic
   search got built before any organisation features.</p>
 </div>
 
@@ -313,21 +313,20 @@ everywhere. Save with intent, never return.</p>
 Management learners</strong>. The problem isn't unique to them. What they have is a shared
 vocabulary, a shared deadline and fairly predictable content types, and those three things are
 what make the classifier tractable, the taxonomy meaningful and the users reachable for research.
-It's the initial learning domain rather than the ceiling.</p>
+It's where the product starts, and not where it stops.</p>
 <div class="callout">
   <div class="label">Why the MVP starts narrow when the problem is broad</div>
   <p>A fixed taxonomy is what makes saved content instantly scannable, and a taxonomy only works if
   you know the domain. Build for everyone on day one and you end up with either no categories or
   generic ones. Both hand the job of organising back to the user, which is the thing that already
-  failed. The good news is that <strong>generalising later is a configuration problem rather than a
-  rebuild</strong>. Ingestion, embedding, retrieval and citation are already domain-agnostic. The
+  failed. The good news is that <strong>generalising later is a configuration problem and not a rebuild</strong>. Ingestion, embedding, retrieval and citation are already domain-agnostic. The
   category list is the only part that isn't.</p>
 </div>
 
 <h2 id="why">Why build it, when so much of this exists</h2>
 
 <p>Plenty of tools hold saved content. None of them were built for the specific failure I had.
-It's worth being precise about why, rather than waving vaguely at "existing tools don't do it".</p>
+It's worth being precise about why, instead of waving vaguely at "existing tools don't do it".</p>
 
 <table>
   <thead><tr><th>What I could have used</th><th>What it's built for, and where that leaves me</th></tr></thead>
@@ -403,7 +402,7 @@ It's worth being precise about why, rather than waving vaguely at "existing tool
   screenshot shows the image, a LinkedIn post shows the author and its preview, a chat import
   shows the WhatsApp mark. None of it is a generic file icon, because you should be able to
   recognise a save without reading it. Numbers like page count and read time come from stored
-  values, and a card leaves out any it doesn't have rather than printing a zero.</figcaption>
+  values, and a card leaves out any it doesn't have instead of printing a zero.</figcaption>
 </figure>
 
 <figure>
@@ -442,8 +441,7 @@ It's worth being precise about why, rather than waving vaguely at "existing tool
 <h3>The item is the atom</h3>
 <p>A WhatsApp export doesn't become one saved item. It becomes one item <em>per message</em>.
 Otherwise a 40-message chat containing three useful ideas is a single unsearchable blob, and
-retrieval hands you the whole conversation when what you wanted was one paragraph of it. Splitting
-at ingest is what lets a citation point at something small enough to actually check.</p>
+retrieval hands you the whole conversation when what you wanted was one paragraph of it. Splitting at ingest lets a citation point at something small enough to actually check.</p>
 
 <h3>Two kinds of label, on purpose</h3>
 <table>
@@ -451,7 +449,7 @@ at ingest is what lets a citation point at something small enough to actually ch
   <tbody>
     <tr><td>Who sets them</td><td>The AI, from a fixed list; the user can override</td><td>The user, freely</td></tr>
     <tr><td>How many</td><td>One to three per item, never zero</td><td>Any</td></tr>
-    <tr><td>Why</td><td>A closed list is what makes the filter rail trustworthy. An open one gives you "Product Sense", "Product-Sense" and "PS" within a week</td><td>Personal structure the taxonomy can't anticipate. Favourites are implemented as one</td></tr>
+    <tr><td>Why</td><td>A closed list keeps the filter rail trustworthy. An open one gives you "Product Sense", "Product-Sense" and "PS" within a week</td><td>Personal structure the taxonomy can't anticipate. Favourites are implemented as one</td></tr>
   </tbody>
 </table>
 
@@ -468,7 +466,7 @@ the thinking actually shows.</p>
 
 <div class="decision">
   <span class="tag">Decision 01</span>
-  <h3>RAG rather than fine-tuning or keyword search</h3>
+  <h3>RAG, over fine-tuning or keyword search</h3>
   <p>There were three ways to do "find the right thing fast". Keyword search falls over on the exact
   query people actually have, because what you remember is a post's <em>idea</em> and not its
   vocabulary. Fine-tuning has a different problem: on a personal library that changes every day,
@@ -488,8 +486,7 @@ the thinking actually shows.</p>
   and persists nothing at all, and <code>/commit</code> is the only endpoint that writes.</p>
   <p>Two reasons for that. An abandoned add should leave nothing behind, since half the point of
   this product is not accumulating junk in the first place. And a duplicate check is only useful
-  <em>before</em> you save. Telling someone they have just created a duplicate is a notification
-  rather than a feature.</p>
+  <em>before</em> you save. Telling someone they have just created a duplicate is a notification and nothing more.</p>
 </div>
 
 <div class="decision">
@@ -523,7 +520,7 @@ the thinking actually shows.</p>
   <p>Every piece runs on a free tier: Supabase for Postgres, pgvector, auth and storage; Vercel for
   hosting and serverless functions; Google Gemini for generation and embeddings; OCR and PDF
   rendering in the browser, where they cost nothing.</p>
-  <p>That constraint shaped the architecture, not just the bill. Uploads cap at 4MB because a
+  <p>That constraint shaped the architecture and not just the bill. Uploads cap at 4MB because a
   serverless function rejects a larger body before my code ever runs, so a higher limit would only
   swap a clear message for an opaque failure. A daily cron pings the database because free Supabase
   projects pause when they go idle, and a portfolio link is most likely to be opened by exactly the
@@ -561,20 +558,20 @@ other when a question gets asked. They share an embedding model and nothing else
 <h3>What each stage does</h3>
 <ul>
   <li><b>Extraction is per type.</b> Sanitised HTML for a note. Tesseract.js OCR in the browser for a screenshot. <code>pdf-parse</code> for a document, plus pdf.js rasterising page 1 as cover art. A parser that splits a chat export into one item per message, and an HTML fetch with metadata parsing for a link.</li>
-  <li><b>Classification and summarisation happen in one call.</b> Gemini returns strict JSON: category from the fixed list, a short title and subtitle, a 1 to 2 line summary, and 3 to 5 key points. The response is defended rather than trusted, so malformed JSON gets recovered, arrays get coerced, and an empty response raises instead of quietly saving a blank.</li>
+  <li><b>Classification and summarisation happen in one call.</b> Gemini returns strict JSON: category from the fixed list, a short title and subtitle, a 1 to 2 line summary, and 3 to 5 key points. The response gets defended, not trusted, so malformed JSON gets recovered, arrays get coerced, and an empty response raises instead of quietly saving a blank.</li>
   <li><b>Duplicate detection reuses that embedding.</b> Cosine similarity against existing items, surfaced <em>before</em> saving, while it can still change your mind.</li>
   <li><b>Only referenced sources become citations.</b> Retrieval returns the top matches; the answer cites some of them. Attaching all would inflate the "used N sources" claim into something untrue.</li>
   <li><b>Citations keep their index and their passage</b>, so a reopened conversation still agrees with its own text and the exact passage an answer leaned on stays checkable.</li>
 </ul>
 
 <h3>Designing for the model failing</h3>
-<p>The model is treated as an unreliable dependency rather than a given, because in practice it is.</p>
+<p>The model is treated as an unreliable dependency, because in practice that is what it is.</p>
 <table>
   <thead><tr><th>Failure</th><th>Response</th></tr></thead>
   <tbody>
     <tr><td>Model overloaded (503)</td><td>Retry with backoff, then fall back across models. Another lightweight model first, full Flash last, because its free-tier allowance is roughly 20 requests a day</td></tr>
     <tr><td>Daily quota exhausted (429)</td><td>A distinct error, because the advice differs: wait a minute versus wait until tomorrow</td></tr>
-    <tr><td>Malformed JSON</td><td>Recovered field by field rather than discarding the whole response</td></tr>
+    <tr><td>Malformed JSON</td><td>Recovered field by field instead of discarding the whole response</td></tr>
     <tr><td>Classification fails entirely</td><td>The save still goes through and the item lands with editable fields. The AI accelerates this flow; it doesn't gate it</td></tr>
     <tr><td>Embedding fails</td><td>Retried. An item without a vector is silently invisible to search and skips dedup, which is worse than a visibly missing summary</td></tr>
   </tbody>
@@ -615,8 +612,7 @@ other when a question gets asked. They share an embedding model and nothing else
   <p>Worse, the restored view showed the item's <em>summary</em> where the passage the answer had
   actually used should have been. For a product whose whole promise is checkable answers, a
   citation you can't verify is the failure that matters most.</p>
-  <p><b>Now:</b> citations are stored with their index and the retrieved passage rather than just
-  an item id. The item itself is still looked up live, so edits show their current state and
+  <p><b>Now:</b> citations are stored with their index and the retrieved passage, not just an item id. The item itself is still looked up live, so edits show their current state and
   deletions drop out cleanly.</p>
 </details>
 
@@ -650,7 +646,7 @@ in this project going wrong.</p>
 <p>When Gemini went down, the app said <em>"The AI couldn't read this one."</em> The content was
 perfectly readable; Google was overloaded. That sentence sends a user off editing input that was
 never the problem. Failure copy has to name the layer that actually failed. And if the system
-can't tell you which layer that was, you have a logging gap rather than a wording one.</p>
+can't tell you which layer that was, you have a logging gap and not a wording one.</p>
 
 <h3>2. A citation is a promise, and the bar is verification</h3>
 <p>Citations that looked right were subtly wrong twice: renumbered on reopen so the text disagreed
@@ -686,8 +682,7 @@ becomes reachable is the moment its weakest assumption becomes a real one.</stro
 
 <div class="callout ok">
   <div class="label">The one that generalises</div>
-  <p>Most of these are the same lesson wearing different clothes. <strong>An AI product's hard
-  parts sit around the model rather than in it.</strong> The prompt was a day's work. Retries,
+  <p>Most of these are the same lesson wearing different clothes. <strong>An AI product's hard parts sit around the model, not inside it.</strong> The prompt was a day's work. Retries,
   fallbacks, honest failure states, verifiable citations, and knowing what to do when the model
   returns nonsense took the rest of the week. That part is what decides whether anyone trusts the
   output.</p>
@@ -699,7 +694,7 @@ becomes reachable is the moment its weakest assumption becomes a real one.</stro
   <div class="label">Defined before there was anything to measure</div>
   <p>These were written ahead of launch, so what counts as success isn't retrofitted to whatever
   the numbers happen to say later. Each metric names <strong>the failure it would expose</strong>
-  rather than just the thing it counts, which is what makes it possible to be wrong.</p>
+  rather than just the thing it counts, and that is what makes it possible to be wrong.</p>
 </div>
 
 <h3>The four numbers I care about</h3>
@@ -724,8 +719,8 @@ becomes reachable is the moment its weakest assumption becomes a real one.</stro
 
 <div class="callout ok">
   <div class="label">What would change my mind</div>
-  <p>If three of five describe hunting for something they knew they'd saved and then giving up, <strong>resurfacing goes back in</strong>. And it should be triggered by what they were looking for rather than by how old the item is.</p>
-  <p>If nobody clicks a citation, the trust model is wrong and the answer format needs rebuilding around the source rather than the prose.</p>
+  <p>If three of five describe hunting for something they knew they'd saved and then giving up, <strong>resurfacing goes back in</strong>. And it should be triggered by what they were looking for, not by how old the item is.</p>
+  <p>If nobody clicks a citation, the trust model is wrong and the answer format needs rebuilding around the source instead of the prose.</p>
 </div>
 
 <h2 id="stack">How it's built</h2>
@@ -750,8 +745,7 @@ server's clock and off the bill entirely.</p>
 
 <div class="prd-open">
   <h2 id="prd" style="margin-top:6px">Product Requirements: MVP</h2>
-  <p style="margin-bottom:0">This is the brief the build was actually run against, written before
-  the first commit rather than reconstructed afterwards. It's the reason the scope decisions above
+  <p style="margin-bottom:0">This is the brief the build was actually run against, written before the first commit, not reconstructed afterwards. It's the reason the scope decisions above
   have dates and rationale attached. They were argued once, written down, and then honoured.</p>
 </div>
 
@@ -760,7 +754,7 @@ server's clock and off the bill entirely.</p>
 intent, then rarely revisited. Even on a revisit it's hard to judge relevance without re-reading,
 or to find the right item at all. Saved effort quietly gets wasted. The MVP addresses this for Product
 Management learners, whose content types and vocabulary are predictable enough to classify well.
-That is the initial learning domain rather than the intended limit.</p>
+That is where it starts, not where it has to stop.</p>
 <p>This has an architectural consequence: summaries are stored <em>alongside</em> full content
 rather than generated on demand, and "find the right thing fast" is prioritised over "store
 everything", since a plain folder app already does the latter.</p>
@@ -771,8 +765,7 @@ switchers, people ramping into a new role or domain.</p>
 <p><b>Initial audience (MVP):</b> Product Management learners. A large, well-defined first user
 segment with predictable content types and a shared vocabulary, which is what makes a fixed
 taxonomy and an accurate classifier possible at all.</p>
-<p><b>Deliberately not yet:</b> other roles and domains. Serving them is a taxonomy and
-onboarding problem rather than an architectural one. See the roadmap.</p>
+<p><b>Deliberately not yet:</b> other roles and domains. Serving them is a taxonomy and onboarding problem, and not an architectural one. See the roadmap.</p>
 
 <h3>3. Goals and non-goals</h3>
 <table>
@@ -780,7 +773,7 @@ onboarding problem rather than an architectural one. See the roadmap.</p>
   <tbody>
     <tr><td>One place that accepts every format prep content arrives in</td><td>Being a general-purpose read-later app</td></tr>
     <tr><td>Judge an item's relevance without re-reading it</td><td>Replacing the source platforms</td></tr>
-    <tr><td>Answer questions across the whole library, with citations</td><td>Answering from general knowledge rather than the user's saves</td></tr>
+    <tr><td>Answer questions across the whole library, with citations</td><td>Answering from general knowledge instead of the user's saves</td></tr>
     <tr><td>Catch near-duplicates before they accumulate</td><td>Collaboration, sharing, multi-user features</td></tr>
   </tbody>
 </table>
@@ -836,14 +829,14 @@ Application Tips · Frameworks · Industry News · Other.</p>
   <li><span class="tick">▸</span><span><b>Problem definition</b>: diagnosing why saved content goes unused, and rejecting the obvious "better folders" answer</span></li>
   <li><span class="tick">▸</span><span><b>MVP scoping and tradeoffs</b>: a deliberate first user segment, four locked constraints, one specced feature cut with its reasoning</span></li>
   <li><span class="tick">▸</span><span><b>End-to-end AI product design</b>: ingestion, review, retrieval and verification as one experience</span></li>
-  <li><span class="tick">▸</span><span><b>RAG retrieval workflow</b>: extraction, embeddings, vector search and grounded generation, built rather than described</span></li>
+  <li><span class="tick">▸</span><span><b>RAG retrieval workflow</b>: extraction, embeddings, vector search and grounded generation, actually built</span></li>
   <li><span class="tick">▸</span><span><b>Designing for trust</b>: citations that resolve to the exact passage used, and answers that degrade honestly when the model fails</span></li>
   <li><span class="tick">▸</span><span><b>Feasibility against user value</b>: a $0 architecture, browser-side OCR, and limits chosen to fail with a clear message</span></li>
   <li><span class="tick">▸</span><span><b>Independent delivery</b>: idea to deployed product, including auth, security posture and a live demo</span></li>
 </ul>
 
 <h3>10. Roadmap</h3>
-<p>Not built, and each one listed with the reason it isn't in the MVP rather than as a wish.</p>
+<p>Not built, and each one listed with the reason it isn't in the MVP, not just as a wish.</p>
 
 <h4>Next: the friction the MVP still leaves in</h4>
 <table>
