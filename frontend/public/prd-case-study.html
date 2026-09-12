@@ -429,9 +429,9 @@ lets a source link point at something small enough to check.</p>
 <table>
   <thead><tr><th></th><th>Categories</th><th>Tags</th></tr></thead>
   <tbody>
-    <tr><td>Who sets them</td><td>The AI picks from a fixed list, and you can override it</td><td>You, freely</td></tr>
-    <tr><td>How many</td><td>One to three per item, never zero</td><td>Any</td></tr>
-    <tr><td>Why</td><td>A fixed list keeps filtering reliable. An open one gives you "Product Sense", "Product-Sense" and "PS" within a week</td><td>Your own structure, for what the list can't cover. Favourites are built as a tag</td></tr>
+    <tr><td>Who sets them</td><td>The AI picks from a fixed list of six. You can change it, or type one of your own</td><td>Nothing free-form yet. The favourite star is the only tag the app writes</td></tr>
+    <tr><td>How many</td><td>One to three per item, never zero</td><td>One, <code>favorite</code></td></tr>
+    <tr><td>Why</td><td>Holding the model to six keeps filtering reliable. You aren't held to them, because your filing shouldn't depend on my guess about your subject</td><td>A general table instead of a <code>favorite</code> column, so tags can grow later without a migration</td></tr>
   </tbody>
 </table>
 
@@ -505,7 +505,7 @@ is asked. They share an embedding model and nothing else.</p>
     <li class="farr">↓</li>
     <li><div class="fbox"><b>Content extraction</b> <em>HTML · OCR · PDF · chat parser</em></div></li>
     <li class="farr">↓</li>
-    <li><div class="fbox ai"><b>AI sorts it</b> <em>fixed list of categories</em></div></li>
+    <li><div class="fbox ai"><b>AI sorts it</b> <em>six fixed categories</em></div></li>
     <li class="farr">↓</li>
     <li><div class="fbox ai"><b>AI summarises it</b> <em>gist · key points</em></div></li>
     <li class="farr">↓</li>
@@ -657,7 +657,7 @@ fixed category list work. <b>Long term:</b> anyone who saves things to learn fro
   <tbody>
     <tr><td><code>items</code></td><td>The content, its summary, key points, category, dates, and fields like page count</td></tr>
     <tr><td><code>embeddings</code></td><td>The maths behind search by meaning, one per item</td></tr>
-    <tr><td><code>item_categories</code>, <code>tags</code></td><td>Categories and tags. Favourites are stored as a tag</td></tr>
+    <tr><td><code>item_categories</code>, <code>tags</code></td><td>An item's one to three categories, and the tag table, which currently holds only favourites</td></tr>
     <tr><td><code>duplicates</code></td><td>Near-identical pairs and how close they were</td></tr>
     <tr><td><code>annotations</code></td><td>Highlights and notes, anchored so they survive edits</td></tr>
     <tr><td><code>chat_sessions</code>, <code>chat_queries</code></td><td>Conversations, answers, and the sources each one used</td></tr>
@@ -667,6 +667,8 @@ fixed category list work. <b>Long term:</b> anyone who saves things to learn fro
 <h3>7. Categories</h3>
 <p>Interview Questions (Product Sense · RCA · Metrics · Strategy · Behavioural) · Job Postings ·
 Application Tips · Frameworks · Industry News · Other.</p>
+<p>The classifier is held to these six. You can add your own on any item, so the list is closed
+to the model and open to you.</p>
 
 <h3>8. What this project demonstrates</h3>
 <p>Defining a problem and rejecting the obvious answer, scoping an MVP with locked rules and one
