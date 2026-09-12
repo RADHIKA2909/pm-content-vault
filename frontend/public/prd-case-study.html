@@ -241,7 +241,6 @@
   <a href="#ia">IA</a>
   <a href="#decisions">Decisions</a>
   <a href="#ai">AI architecture</a>
-  <a href="#learnings">Lessons</a>
   <a href="#prd">PRD</a>
 </div></nav>
 
@@ -544,8 +543,6 @@ is asked. They share an embedding model and nothing else.</p>
     <tr><td>Model overloaded</td><td>Retry, then fall back to other models, cheapest first, since the best one allows about 20 requests a day free</td></tr>
     <tr><td>Out of daily quota</td><td>A different message, because the advice differs: wait a minute versus wait until tomorrow</td></tr>
     <tr><td>Broken reply format</td><td>Repaired field by field instead of thrown away</td></tr>
-    <tr><td>Sorting fails completely</td><td>The save still works, with blank fields you can fill in. The AI speeds this up, it doesn't block it</td></tr>
-    <tr><td>Search indexing fails</td><td>Retried. An unindexed item is invisible to search and skips the duplicate check, which is worse than a missing summary you can see</td></tr>
   </tbody>
 </table>
 
@@ -554,62 +551,6 @@ is asked. They share an embedding model and nothing else.</p>
   <p>All of these fall back to the same thing: <em>you still get your content saved</em>. The one
   thing that must never slip is the source link. An answer you can't check is worse than no answer,
   because it looks exactly like one you can.</p>
-</div>
-
-<h2 id="learnings">What broke, and what I took from it</h2>
-<p>Four failures worth writing down. Each changed how I think about shipping AI features.</p>
-
-<details>
-  <summary>The app blamed the user for Google's outage</summary>
-  <p>Saving started failing with <em>"The AI couldn't read this one."</em> The content was fine.
-  Google's model was returning "busy, try later", and with one model, no retry and no logging, an
-  outage at their end looked just like unreadable content.</p>
-  <p><b>Now:</b> it retries, falls back to other models, logs every failure, and separates "the
-  service is busy" from "you're out of quota".</p>
-  <p><b>Took from it:</b> the error message is part of the feature. A wrong one sends someone off
-  editing input that was never the problem, and if the system can't say which thing failed, that's
-  a logging problem and not a wording one.</p>
-</details>
-
-<details>
-  <summary>A source link pointing at the wrong number</summary>
-  <p>Sources are numbered by search rank, so an answer using only the fourth result says
-  <code>[4]</code>. Reopening an old conversation renumbered them from 1, so <code>[4]</code> sat
-  next to a card labelled <code>1</code>. Worse, it showed the item's summary instead of the passage
-  the answer used.</p>
-  <p><b>Now:</b> the number and the exact passage are saved with the answer, and the item is still
-  looked up fresh so edits show and deleted items drop out.</p>
-  <p><b>Took from it:</b> a source link is a promise. Neither bug broke a test or looked wrong on
-  screen. The bar isn't <strong>"looks cited"</strong>. It's <strong>"can be checked"</strong>.</p>
-</details>
-
-<details>
-  <summary>A bug only the live site would have found</summary>
-  <p>Between reading your content and saving it, the text sits in memory. If that's missing the app
-  re-reads it, but kept only the text and dropped the rest, so a note could save <strong>with no
-  body at all</strong>. On my laptop it took a fifteen-minute pause to appear. On the live site,
-  where the two steps can run on different machines, it's the normal case.</p>
-  <p><b>Took from it:</b> <strong>deploying isn't just a new address, it's a different
-  environment.</strong></p>
-</details>
-
-<details>
-  <summary>Every uploaded file was public</summary>
-  <p>Anyone with the link could open any PDF or screenshot, no login needed. Harmless on my laptop.
-  Not harmless the moment the app had a public address.</p>
-  <p><b>Now:</b> files are private and every link expires after two hours.</p>
-  <p><b>Took from it:</b> fixing it took under an hour, and it was the thing I'd have been most
-  embarrassed to be asked about. <strong>The moment something is reachable, its weakest assumption
-  becomes real.</strong></p>
-</details>
-
-<div class="callout ok">
-  <div class="label">The one that matters most</div>
-  <p><strong>The hard part of an AI product sits around the model, not inside it.</strong> The
-  prompt took a day. Retries, fallbacks, honest error messages, checkable sources, and deciding
-  what to do when the model returns nonsense took the rest of the week. That's the part that
-  decides whether anyone trusts the output. The other thing I'd repeat: the constraints I wrote
-  down as rules survived, and the preferences I only held in my head didn't.</p>
 </div>
 
 <h2 id="next">What I'd measure, and what I'd ask</h2>
@@ -656,10 +597,6 @@ is asked. They share an embedding model and nothing else.</p>
     <tr><td>In the browser</td><td>Tesseract.js reads screenshots, pdf.js renders PDF covers. Both free, both off the server</td></tr>
   </tbody>
 </table>
-
-<p>Two choices worth calling out: the API sits on the same domain as the site, so there are no
-cross-domain requests in production, and text extraction runs in the browser, off the server and
-off the bill.</p>
 
 <hr class="rule" />
 
