@@ -241,7 +241,7 @@
   <a href="#ia">IA</a>
   <a href="#decisions">Decisions</a>
   <a href="#ai">AI architecture</a>
-  <a href="#learnings">Learnings</a>
+  <a href="#learnings">Lessons</a>
   <a href="#prd">PRD</a>
 </div></nav>
 
@@ -251,10 +251,11 @@
   <span class="kicker">Case study · Solo build</span>
   <h1>The stuff you save to get better at your job, and never look at again.</h1>
   <p class="deck">How I designed and built an AI tool for the things you save to learn from. The
-  first version is for people studying product management. Nothing underneath it is tied to that.</p>
+  first version is for people studying product management, but nothing underneath it is tied to
+  that.</p>
   <p class="lede">Everyone saves things they mean to learn from. Almost nobody goes back. PM Content
   Vault takes the posts, PDFs, screenshots and chat exports sitting in five different apps, works
-  out what each one is, and lets you ask questions of the whole pile. Every answer shows you which
+  out what each one is, and lets you ask questions of the whole pile, with every answer showing the
   saves it came from.</p>
 
   <div class="meta">
@@ -276,15 +277,15 @@
   </div>
   <div class="creds">
     <b>Try it without signing up:</b> <code>demo@pmvault.app</code> / <code>PMVaultDemo2026!</code>
-    <br><span style="color:var(--soft)">A demo account with one saved item of every supported type.</span>
+    <br><span style="color:var(--soft)">A demo account with one item of every supported type.</span>
   </div>
 </header>
 
 <h2 id="problem">The problem</h2>
 
 <p>Anyone learning on their own builds up a pile of saved stuff. A framework from LinkedIn. A PDF
-someone dropped in a group chat. A screenshot. An article bookmarked at midnight. All saved on
-purpose, and almost none of it opened again.</p>
+dropped in a group chat. A screenshot. An article bookmarked at midnight. All saved on purpose,
+almost none of it opened again.</p>
 
 <p>The easy answer is that people are messy and need better folders. I don't buy it. Saving isn't
 the broken part. Three things break after it.</p>
@@ -297,19 +298,17 @@ the broken part. Three things break after it.</p>
 
 <div class="callout">
   <div class="label">The idea this product is built on</div>
-  <p>Storing things was never the problem. <strong>Finding them and judging them</strong> was. So a
-  folder app solves a problem I don't have. That's why every item gets a summary written the moment
-  it's saved, and why search came before any tidying features.</p>
+  <p>Storing things was never the problem. <strong>Finding them and judging them</strong> was.
+  That's why every item gets a summary the moment it's saved, and why search came before tidying
+  features.</p>
 </div>
 
 <h2 id="audience">Who it's for</h2>
-<p>Long term, anyone who saves things to learn from later. People studying for exams, switching
-careers, or teaching themselves something new. The habit is the same everywhere: save it, never
-go back.</p>
+<p>Long term, anyone who saves things to learn from: exam takers, career switchers, people
+teaching themselves something new. The habit is the same everywhere.</p>
 <p>The first group is <strong>people learning product management</strong>. The problem isn't
-special to them, but they share a vocabulary, a deadline and fairly predictable content. That
-makes the categories worth having and the users easy to find and talk to. It's where the product
-starts, not where it stops.</p>
+special to them, but they share a vocabulary, a deadline and predictable content, which makes the
+categories worth having and the users easy to find.</p>
 <div class="callout">
   <div class="label">Why start narrow when the problem is wide</div>
   <p>A fixed set of categories is what makes a saved pile scannable, and you can only pick good
@@ -320,48 +319,47 @@ starts, not where it stops.</p>
 
 <h2 id="why">Why build it when so much already exists</h2>
 
-<p>Lots of tools store saved content. None of them fix the exact thing that was broken for me.</p>
+<p>Lots of tools store saved content. None fix what was actually broken.</p>
 
 <table>
   <thead><tr><th>What I could have used</th><th>Why it doesn't fit</th></tr></thead>
   <tbody>
-    <tr><td>A notes app</td><td>Great storage, but sorting is your job. That's the step people skip while mid-scroll. Any tool that asks me to sort brings the problem back.</td></tr>
-    <tr><td>A read-later app</td><td>Built for articles and a reading queue. Most of what I save is a screenshot, a PDF or a chat message. It answers "what haven't I read", not "where's that thing about stakeholder conflict".</td></tr>
-    <tr><td>A highlights tool</td><td>Good at pulling quotes out of things you already read. It assumes you know which source to open. My problem starts before that.</td></tr>
-    <tr><td>A general AI chatbot</td><td>Happily answers questions about a file you give it, but every chat starts empty. Nothing builds up, nothing gets checked for duplicates, and nothing remembers what you've read or starred.</td></tr>
-    <tr><td>Platform search</td><td>Saved posts stay on the app that hosted them. That's five searches instead of one, all keyword-only, none aware of the others.</td></tr>
+    <tr><td>A notes app</td><td>Great storage, but sorting is your job, and that's the step people skip mid-scroll.</td></tr>
+    <tr><td>A read-later app</td><td>Built for a reading queue. It answers "what haven't I read", not "where's that thing about stakeholder conflict".</td></tr>
+    
+    <tr><td>A general AI chatbot</td><td>Answers questions about a file you hand it, but every chat starts empty. Nothing builds up.</td></tr>
+    <tr><td>Platform search</td><td>Saved posts stay on the app that hosted them. Five searches instead of one, all keyword-only.</td></tr>
   </tbody>
 </table>
 
 <div class="callout">
   <div class="label">The gap this fills</div>
-  <p>Each option above is good at one of three things: <em>take anything</em>, <em>understand it
-  without being asked</em>, <em>answer across all of it with sources</em>. The value is doing all
-  three to the same pile. They also depend on each other, because if nothing is understood at save
-  time, there's nothing to search later.</p>
+  <p>Each option is good at one of three things: <em>take anything</em>, <em>understand it without
+  being asked</em>, <em>answer across all of it with sources</em>. The value is doing all three to
+  the same pile, and they depend on each other.</p>
 </div>
 
 <h2 id="journey">The journey, and where it still hurts</h2>
-<p>Four moments matter. Here's what the product does at each, and what's still annoying.</p>
+<p>Four moments matter, and here is what still annoys me at each.</p>
 
 <div style="margin:26px 0">
   <div class="step">
     <div class="n">1</div>
     <div>
       <h4>Spot something worth keeping</h4>
-      <p>On a phone, inside LinkedIn or a group chat. You have a few seconds. Anything slower than
-      that and the thing is gone.</p>
+      <p>On a phone, inside LinkedIn or a group chat. You have a few seconds before the thing is
+      gone.</p>
       <span class="friction">Still annoying: copy → switch app → paste</span>
-      <p style="margin-top:8px;font-size:14.5px;color:var(--soft)">The one step the MVP doesn't fix,
-      which is why sharing straight from other apps is first on the roadmap.</p>
+      <p style="margin-top:8px;font-size:14.5px;color:var(--soft)">The one step the MVP doesn't fix.
+      It's first on the roadmap.</p>
     </div>
   </div>
   <div class="step">
     <div class="n">2</div>
     <div>
       <h4>Save it and stop thinking</h4>
-      <p>Paste, upload, or drop in a chat export. That's the whole job. The app does the reading and
-      sorting, and shows you what it got before anything is saved.</p>
+      <p>Paste, upload, or drop in a chat export. The app does the reading and sorting, and shows you
+      what it got before anything is saved.</p>
       <span class="solved">No filing, no folders, no naming</span>
     </div>
   </div>
@@ -369,8 +367,8 @@ starts, not where it stops.</p>
     <div class="n">3</div>
     <div>
       <h4>Come back days later, half-remembering</h4>
-      <p>Browse the Library, where each card shows a gist, a type and a read time. Or ask a question
-      in plain English and let search find it.</p>
+      <p>Browse the Library, where each card shows a gist, a type and a read time. Or just ask a
+      question in plain English.</p>
       <span class="solved">Search by meaning, not keywords</span>
     </div>
   </div>
@@ -378,8 +376,7 @@ starts, not where it stops.</p>
     <div class="n">4</div>
     <div>
       <h4>Check whether to trust the answer</h4>
-      <p>Every answer is numbered back to the saves it used, and opening one shows the exact passage
-      behind it.</p>
+      <p>Every answer is numbered back to the saves it used.</p>
       <span class="solved">Every claim traceable to a source</span>
     </div>
   </div>
@@ -389,24 +386,22 @@ starts, not where it stops.</p>
 
 <figure>
   <img src="/prd-case-study/02-library-grid.jpg" alt="The Library: a grid of saved items, each card styled by content type" loading="lazy" />
-  <figcaption><b>Every card knows what it is.</b> A PDF shows its first page, a screenshot shows the
-  image, a LinkedIn post shows the author. No generic file icons, because you should recognise a
-  save without reading it. If a card has no page count or read time, it leaves the line out instead
-  of showing a zero.</figcaption>
+  <figcaption><b>Every card knows what it is.</b> A PDF shows its first page, a screenshot shows
+  the image, a LinkedIn post shows the author. No generic file icons, because you should recognise
+  a save without reading it.</figcaption>
 </figure>
 
 <figure>
   <img src="/prd-case-study/09-add-review.jpg" alt="The Add Content review step showing AI-suggested title, category and key points" loading="lazy" />
   <figcaption><b>The AI suggests, you approve.</b> Adding something reads it, sorts it, summarises
-  it and checks for duplicates, then stops and shows you the result. Every field is editable. An
-  <code>AI</code> chip marks what the model wrote and disappears once you change it.</figcaption>
+  it and checks for duplicates, then stops and shows you the result. An <code>AI</code> chip marks
+  what the model wrote and disappears once you edit it.</figcaption>
 </figure>
 
 <figure>
   <img src="/prd-case-study/06-chat-cited.jpg" alt="Ask My Vault answering a question with numbered citations and source cards" loading="lazy" />
-  <figcaption><b>Answers you can check.</b> Ask My Vault answers from your own saves, with numbered
-  sources. Open a source and you see the exact passage the answer used, not the item's
-  summary.</figcaption>
+  <figcaption><b>Answers you can check.</b> Ask My Vault answers from your own saves. Open a source
+  and you see the exact passage the answer used, not the item's summary.</figcaption>
 </figure>
 
 <figure>
@@ -417,7 +412,7 @@ starts, not where it stops.</p>
 
 <h2 id="ia">How it's organised</h2>
 
-<p>Five places to go, plus one decision underneath that everything follows from.</p>
+<p>Five places, plus two decisions underneath.</p>
 
 <div class="tree"><b>Dashboard</b>      <span>: counts, recent saves, continue a conversation</span>
 <b>Library</b>        <span>: everything, filtered by category / source / date / duplicates</span>
@@ -427,50 +422,46 @@ starts, not where it stops.</p>
 <b>Settings</b>       <span>: account, defaults, data</span></div>
 
 <h3>One message is one item</h3>
-<p>A WhatsApp export doesn't save as one item. Each message becomes its own. Otherwise a 40-message
-chat with three good ideas in it is one big unsearchable blob, and a search hands back the whole
-conversation when you wanted one paragraph. Splitting it up front is what lets a source link point
-at something small enough to check.</p>
+<p>A WhatsApp export doesn't save as one item. Each message becomes its own, because a 40-message
+chat with three good ideas in it is otherwise one unsearchable blob. Splitting it up front is what
+lets a source link point at something small enough to check.</p>
 
 <h3>Two kinds of label, on purpose</h3>
 <table>
   <thead><tr><th></th><th>Categories</th><th>Tags</th></tr></thead>
   <tbody>
-    <tr><td>Who sets them</td><td>The AI picks from a fixed list. You can override it</td><td>You, freely</td></tr>
+    <tr><td>Who sets them</td><td>The AI picks from a fixed list, and you can override it</td><td>You, freely</td></tr>
     <tr><td>How many</td><td>One to three per item, never zero</td><td>Any</td></tr>
-    <tr><td>Why</td><td>A fixed list keeps filtering reliable. An open one gives you "Product Sense", "Product-Sense" and "PS" inside a week</td><td>Your own structure, for things the fixed list can't cover. Favourites are built as a tag</td></tr>
+    <tr><td>Why</td><td>A fixed list keeps filtering reliable. An open one gives you "Product Sense", "Product-Sense" and "PS" within a week</td><td>Your own structure, for what the list can't cover. Favourites are built as a tag</td></tr>
   </tbody>
 </table>
 
 <div class="callout">
   <div class="label">Never zero</div>
-  <p>Every item gets at least one category, falling back to <code>Other</code> if the model won't
-  pick. An "uncategorised" pile sounds harmless, but it's exactly where things go to be forgotten,
-  and forgetting is the problem this whole product exists to fix.</p>
+  <p>Every item gets at least one category, falling back to <code>Other</code>. An "uncategorised"
+  pile sounds harmless, but it's where things go to be forgotten, and forgetting is the problem this
+  product exists to fix.</p>
 </div>
 
 <h2 id="decisions">Decisions that shaped it</h2>
 <p>The feature list is the least interesting part. What got argued down is where the thinking
-shows.</p>
+is.</p>
 
 <div class="decision">
   <span class="tag">Decision 01</span>
   <h3>Search by meaning, not keywords, and no model training</h3>
   <p>Keyword search fails on the query people actually have, because you remember a post's
-  <em>idea</em>, not its words. Training a model on your own library has a different problem: your
-  library changes daily, so every new save would mean retraining. Search by meaning solves both. A
-  new save is findable the second it's added, and every answer can point back at what it came from.
-  That became the tiebreaker for later calls: anything trading source accuracy for convenience got
-  dropped.</p>
+  <em>idea</em>, not its words. Training a model has a different problem: your library changes
+  daily, so every save means retraining. Search by meaning solves both, and every answer can point
+  back at what it came from. That last part became the tiebreaker for every later call.</p>
 </div>
 
 <div class="decision">
   <span class="tag">Decision 02</span>
   <h3>Nothing is saved until you confirm</h3>
-  <p>The normal way to build this is to save the row first and tidy it up in the background. I did
-  the opposite. All the AI work runs in memory, and only pressing save writes anything. Two
-  reasons. An abandoned add should leave nothing behind, since not accumulating junk is half the
-  point. And a duplicate warning is only useful <em>before</em> you save. Telling someone they've
+  <p>The normal way is to save the row first and tidy it in the background. I did the opposite: the
+  AI work runs in memory, and only pressing save writes anything. An abandoned add leaves nothing
+  behind, and a duplicate warning is only useful <em>before</em> you save. Telling someone they've
   just made a duplicate is a notification, not a feature.</p>
 </div>
 
@@ -478,9 +469,9 @@ shows.</p>
   <span class="tag">Decision 03</span>
   <h3>No LinkedIn scraping, even though it's the biggest source</h3>
   <p>Most of what I save is on LinkedIn, and auto-importing it would be the single most useful
-  feature. It also breaks LinkedIn's terms, so the app only takes a pasted link or pasted text.
-  This costs real convenience. I wrote it into the brief as a locked rule before building, so I
-  couldn't quietly talk myself out of it at 1am when the manual flow felt slow.</p>
+  feature. It also breaks LinkedIn's terms, so the app only takes a pasted link or text. I wrote it
+  into the brief as a locked rule before building, so I couldn't talk myself out of it at 1am when
+  the manual flow felt slow.</p>
 </div>
 
 <div class="decision">
@@ -489,26 +480,23 @@ shows.</p>
   <p>"Resurfacing" was feature #7 in my own brief: anything untouched for 14 days pops up in a
   reminder widget. Six of seven shipped. I cut this one, and not because it was hard. It was the
   cheapest thing left, two rules over a date. I cut it because <strong>showing you something just
-  because it's old is a guess about what you want, and the product has no evidence for that
-  guess.</strong> "You saved this two weeks ago" isn't a reason to read it. It goes back on the
-  list the day users show me they're hunting for forgotten saves, and I've written down what that
-  evidence looks like.</p>
+  because it's old is a guess about what you want, and there's no evidence for it.</strong> It goes
+  back on the list the day users show me otherwise.</p>
 </div>
 
 <div class="decision">
   <span class="tag">Decision 05</span>
   <h3>A hard $0 budget, treated as a design constraint</h3>
-  <p>Everything runs on a free tier. Supabase for the database, auth and files. Vercel for hosting.
-  Gemini for the AI. Reading text out of images and PDFs happens in the browser, where it costs
-  nothing. That shaped the build, not just the bill. Uploads cap at 4MB because the hosting
-  rejects anything bigger before my code runs, so a higher limit would only swap a clear message
-  for a confusing failure. A daily ping keeps the database awake, because free projects go to sleep
-  and a portfolio link is most likely to be opened by the exact person you don't want waiting.</p>
+  <p>Everything runs on a free tier, and text extraction happens in the browser where it costs
+  nothing. That shaped the build, not just the bill. Uploads cap at 4MB because the hosting rejects
+  anything bigger before my code runs, so a higher limit would swap a clear message for a confusing
+  failure. A daily ping keeps the database awake, since free projects sleep and a portfolio link is
+  most likely to be opened by the person you least want waiting.</p>
 </div>
 
 <h2 id="ai">AI architecture</h2>
 
-<p>Two AI paths, kept apart on purpose. One runs when content arrives, the other when a question
+<p>Two AI paths, kept apart on purpose: one runs when content arrives, the other when a question
 is asked. They share an embedding model and nothing else.</p>
 
 <div class="flow">
@@ -536,16 +524,16 @@ is asked. They share an embedding model and nothing else.</p>
 
 <h3>What each stage does</h3>
 <ul>
-  <li><b>Reading the content depends on the type.</b> Notes come in as clean HTML. Screenshots go
-  through Tesseract in the browser. PDFs go through <code>pdf-parse</code>, with page 1 rendered as
-  the cover image. Chat exports get split into one item per message. Links get fetched.</li>
-  <li><b>Sorting and summarising happen in one call.</b> Gemini returns a category from the fixed
-  list, a title, a short summary and 3 to 5 key points. The reply is checked, not trusted. Broken
-  JSON gets repaired, and an empty reply throws an error instead of quietly saving a blank item.</li>
+  <li><b>Reading depends on the type.</b> Notes arrive as clean HTML, screenshots go through
+  Tesseract in the browser, PDFs through <code>pdf-parse</code>, chat exports split one item per
+  message.</li>
+  <li><b>Sorting and summarising happen in one call.</b> Gemini returns a category, title, summary
+  and 3 to 5 key points. The reply is checked, not trusted: broken JSON gets repaired, and an empty
+  reply throws instead of quietly saving a blank item.</li>
   <li><b>The duplicate check reuses the same maths</b>, and runs <em>before</em> saving, while it
   can still change your mind.</li>
-  <li><b>Only sources the answer actually used get listed.</b> Search returns the top matches, and
-  the answer uses some of them. Listing all of them would make "used 5 sources" a lie.</li>
+  <li><b>Only sources the answer actually used get listed.</b> Search returns the top matches and
+  the answer uses some. Listing them all would make "used 5 sources" a lie.</li>
 </ul>
 
 <h3>Designing for the model failing</h3>
@@ -553,11 +541,11 @@ is asked. They share an embedding model and nothing else.</p>
 <table>
   <thead><tr><th>What goes wrong</th><th>What happens</th></tr></thead>
   <tbody>
-    <tr><td>Model overloaded</td><td>Retry, then try other models. The cheap one first, the expensive one last, since it only allows about 20 requests a day free</td></tr>
-    <tr><td>Out of daily quota</td><td>A different error message, because the advice differs: wait a minute versus wait until tomorrow</td></tr>
+    <tr><td>Model overloaded</td><td>Retry, then fall back to other models, cheapest first, since the best one allows about 20 requests a day free</td></tr>
+    <tr><td>Out of daily quota</td><td>A different message, because the advice differs: wait a minute versus wait until tomorrow</td></tr>
     <tr><td>Broken reply format</td><td>Repaired field by field instead of thrown away</td></tr>
-    <tr><td>Sorting fails completely</td><td>The save still works. You get the item with blank fields you can fill in. The AI speeds this up, it doesn't block it</td></tr>
-    <tr><td>Search indexing fails</td><td>Retried. An item with no index is invisible to search and skips the duplicate check, which is worse than a missing summary you can see</td></tr>
+    <tr><td>Sorting fails completely</td><td>The save still works, with blank fields you can fill in. The AI speeds this up, it doesn't block it</td></tr>
+    <tr><td>Search indexing fails</td><td>Retried. An unindexed item is invisible to search and skips the duplicate check, which is worse than a missing summary you can see</td></tr>
   </tbody>
 </table>
 
@@ -568,127 +556,92 @@ is asked. They share an embedding model and nothing else.</p>
   because it looks exactly like one you can.</p>
 </div>
 
-<h2 id="broke">What broke, and what I changed</h2>
+<h2 id="learnings">What broke, and what I took from it</h2>
 <p>Four failures worth writing down. Each changed how I think about shipping AI features.</p>
 
 <details>
   <summary>The app blamed the user for Google's outage</summary>
   <p>Saving started failing with <em>"The AI couldn't read this one."</em> The content was fine.
-  Google's model was returning "busy, try later" on five calls in a row.</p>
-  <p>Three mistakes stacked up. One model with no backup. No retry. And no logging, so an outage at
-  Google's end looked exactly like unreadable content, with nothing to tell them apart. Worst of
-  all, the message blamed the user for someone else's traffic spike.</p>
-  <p><b>Now:</b> it retries, falls back to other models, logs every failure, and says "the service
-  is busy" separately from "you're out of quota", because the advice is different.</p>
+  Google's model was returning "busy, try later", and with one model, no retry and no logging, an
+  outage at their end looked just like unreadable content.</p>
+  <p><b>Now:</b> it retries, falls back to other models, logs every failure, and separates "the
+  service is busy" from "you're out of quota".</p>
+  <p><b>Took from it:</b> the error message is part of the feature. A wrong one sends someone off
+  editing input that was never the problem, and if the system can't say which thing failed, that's
+  a logging problem and not a wording one.</p>
 </details>
 
 <details>
   <summary>A source link pointing at the wrong number</summary>
-  <p>Sources are numbered by where they came up in the search, so an answer using only the fourth
-  result correctly says <code>[4]</code>. But reopening an old conversation renumbered them from 1,
-  so the text said <code>[4]</code> next to a card labelled <code>1</code>.</p>
-  <p>Worse, it showed the item's summary instead of the passage the answer actually used. For a
-  product whose whole promise is checkable answers, that's the failure that matters most.</p>
-  <p><b>Now:</b> the number and the exact passage are saved with the answer. The item itself is
-  still looked up fresh, so edits show up and deleted items drop out.</p>
+  <p>Sources are numbered by search rank, so an answer using only the fourth result says
+  <code>[4]</code>. Reopening an old conversation renumbered them from 1, so <code>[4]</code> sat
+  next to a card labelled <code>1</code>. Worse, it showed the item's summary instead of the passage
+  the answer used.</p>
+  <p><b>Now:</b> the number and the exact passage are saved with the answer, and the item is still
+  looked up fresh so edits show and deleted items drop out.</p>
+  <p><b>Took from it:</b> a source link is a promise. Neither bug broke a test or looked wrong on
+  screen. The bar isn't <strong>"looks cited"</strong>. It's <strong>"can be checked"</strong>.</p>
 </details>
 
 <details>
   <summary>A bug only the live site would have found</summary>
-  <p>Between reading your content and saving it, the text sits in memory. If that memory is missing,
-  the app reads it again, which is sensible. But it kept only the text and dropped everything else,
-  so a note could save <strong>with no body at all</strong>.</p>
-  <p>On my laptop this only happened if you left the screen open for fifteen minutes. On the live
-  site, the two steps can run on different machines, so the rare case becomes the normal one. I
-  caught it reading the code before deploying, so it never actually ran.</p>
+  <p>Between reading your content and saving it, the text sits in memory. If that's missing the app
+  re-reads it, but kept only the text and dropped the rest, so a note could save <strong>with no
+  body at all</strong>. On my laptop it took a fifteen-minute pause to appear. On the live site,
+  where the two steps can run on different machines, it's the normal case.</p>
+  <p><b>Took from it:</b> <strong>deploying isn't just a new address, it's a different
+  environment.</strong></p>
 </details>
 
 <details>
   <summary>Every uploaded file was public</summary>
   <p>Anyone with the link could open any PDF or screenshot, no login needed. Harmless on my laptop.
   Not harmless the moment the app had a public address.</p>
-  <p><b>Now:</b> files are private and every link expires after two hours. The code reads both the
-  old and new link formats, so nothing had to be migrated.</p>
+  <p><b>Now:</b> files are private and every link expires after two hours.</p>
+  <p><b>Took from it:</b> fixing it took under an hour, and it was the thing I'd have been most
+  embarrassed to be asked about. <strong>The moment something is reachable, its weakest assumption
+  becomes real.</strong></p>
 </details>
-
-<h2 id="learnings">What I'd take to the next build</h2>
-
-<p>Six things I believe more strongly now. The first two and the last two were paid for by the
-failures above.</p>
-
-<h3>1. The error message is part of the feature</h3>
-<p><em>"The AI couldn't read this one"</em> sent me off editing content that was fine. An error has
-to name the thing that actually failed, and if the system can't tell which thing that was, that's a
-logging problem and not a wording problem.</p>
-
-<h3>2. A source link is a promise</h3>
-<p>My sources looked right and were quietly wrong twice. Neither version broke a test or looked
-broken on screen. For a product built on checkable answers, the bar isn't
-<strong>"looks cited"</strong>. It's <strong>"can be checked"</strong>.</p>
-
-<h3>3. Constraints beat prioritisation frameworks</h3>
-<p>A $0 budget and LinkedIn's terms each killed whole branches of work before I could argue with
-myself about them. <strong>The rules I wrote down survived. The preferences I only held in my head
-didn't.</strong></p>
-
-<h3>4. Cutting a planned feature is itself a decision</h3>
-<p>The hard part of cutting resurfacing wasn't working out that it should go. It was that I'd
-already written it down, and written plans get heavy. Being able to explain <em>why</em> it's cut,
-and what would bring it back, is worth more than shipping it.</p>
-
-<h3>5. Working on your laptop proves less than it feels like</h3>
-<p>That empty-note bug needed a fifteen-minute pause to appear on my machine. On the live site,
-where each request can land on a different machine, it becomes the normal case. <strong>Deploying
-isn't just a new address, it's a different environment.</strong></p>
-
-<h3>6. Lock things down before the URL goes public, not after</h3>
-<p>The public files took under an hour to fix, and it was the thing I'd have been most embarrassed
-to be asked about. <strong>The moment something is reachable, its weakest assumption becomes
-real.</strong></p>
 
 <div class="callout ok">
   <div class="label">The one that matters most</div>
-  <p>Most of these are the same lesson in different clothes. <strong>The hard part of an AI product
-  sits around the model, not inside it.</strong> The prompt took a day. Retries, fallbacks, honest
-  error messages, checkable sources, and deciding what to do when the model returns nonsense took
-  the rest of the week. That's the part that decides whether anyone trusts the output.</p>
+  <p><strong>The hard part of an AI product sits around the model, not inside it.</strong> The
+  prompt took a day. Retries, fallbacks, honest error messages, checkable sources, and deciding
+  what to do when the model returns nonsense took the rest of the week. That's the part that
+  decides whether anyone trusts the output. The other thing I'd repeat: the constraints I wrote
+  down as rules survived, and the preferences I only held in my head didn't.</p>
 </div>
 
 <h2 id="next">What I'd measure, and what I'd ask</h2>
 
-<div class="callout">
-  <div class="label">Written before there was anything to measure</div>
-  <p>Set before launch, so success can't be defined afterwards to match whatever the numbers say.
-  Each one names <strong>the failure it would catch</strong>, not just the thing it counts.</p>
-</div>
+<p>Set before launch, so success can't be defined afterwards to match the numbers. Each one names
+<strong>the failure it would catch</strong>, not just the thing it counts.</p>
 
 <h3>The four numbers I care about</h3>
 <table>
   <thead><tr><th>Question</th><th>Measure</th><th>Why this one</th></tr></thead>
   <tbody>
     <tr><td>Does saved content get used?</td><td>% of saves opened at least once in 30 days</td><td>The main claim. If this doesn't beat roughly zero, nothing else matters.</td></tr>
-    <tr><td>Does search actually work?</td><td>% of questions where someone opens a source</td><td>An answer nobody clicks into is just a nice-sounding answer. That's the failure I fear most.</td></tr>
-    <tr><td>Is it faster than before?</td><td>Time from question to finding the right save</td><td>It only earns its place if it beats scrolling LinkedIn saves.</td></tr>
-    <tr><td>Is the AI trusted?</td><td>% of AI-filled fields edited before saving</td><td>Lots of edits means it's getting things wrong. Zero edits probably means nobody's reading them.</td></tr>
+    <tr><td>Does search actually work?</td><td>% of questions where someone opens a source</td><td>An answer nobody clicks into is just a nice-sounding answer. The failure I fear most.</td></tr>
+    <tr><td>Is it faster than before?</td><td>Time from question to the right save</td><td>It only earns its place if it beats scrolling LinkedIn saves.</td></tr>
+    <tr><td>Is the AI trusted?</td><td>% of AI-filled fields edited before saving</td><td>Lots of edits means it's getting things wrong. Zero probably means nobody's reading them.</td></tr>
   </tbody>
 </table>
 
 <h3>The five questions I'd ask users</h3>
 <ol>
-  <li>Show me the last five things you saved. Where are they? <em>(Is "scattered" real, or just my problem?)</em></li>
+  <li>Show me the last five things you saved. Where are they? <em>(Is "scattered" real?)</em></li>
   <li>When did you last go looking for something you'd saved? What did you do?</li>
-  <li>What happened when you couldn't find it? <em>(Googling it again is the strongest sign the saving was wasted.)</em></li>
-  <li>Here's an answer using three of your saves. Do you trust it? What would make you check?</li>
-  <li>You haven't opened this in three weeks. Should the app have told you? <em>(This decides whether resurfacing comes back.)</em></li>
+  <li>What happened when you couldn't find it? <em>(Googling it again means the save was wasted.)</em></li>
+  <li>Here's an answer built from three of your saves. Do you trust it? What would make you check?</li>
+  <li>You haven't opened this in three weeks. Should the app have said so? <em>(Decides whether resurfacing comes back.)</em></li>
 </ol>
 
 <div class="callout ok">
   <div class="label">What would change my mind</div>
   <p>If three of five describe hunting for something they knew they'd saved and giving up,
   <strong>resurfacing goes back in</strong>, triggered by what they were looking for and not by how
-  old the item is.</p>
-  <p>If nobody opens a source, the trust model is wrong and answers need rebuilding around the
-  source rather than the text.</p>
+  old the item is. If nobody opens a source, the trust model is wrong.</p>
 </div>
 
 <h2 id="stack">How it's built</h2>
@@ -696,40 +649,37 @@ real.</strong></p>
 <table>
   <tbody>
     <tr><td>Frontend</td><td>React (Vite) + Tailwind, hosted on Vercel</td></tr>
-    <tr><td>API</td><td>Express, running on Vercel on the same domain as the site</td></tr>
-    <tr><td>Database</td><td>Supabase Postgres, with <code>pgvector</code> for search by meaning</td></tr>
-    <tr><td>Login</td><td>Supabase Auth, Google and email/password. Every table is locked to its owner</td></tr>
-    <tr><td>AI</td><td>Gemini for sorting, summaries and answers, plus <code>gemini-embedding-001</code> for search</td></tr>
-    <tr><td>In the browser</td><td>Tesseract.js reads text from screenshots, pdf.js renders PDF covers. Both free, both off the server</td></tr>
+    <tr><td>API</td><td>Express on Vercel, same domain as the site</td></tr>
+    <tr><td>Database</td><td>Supabase Postgres with <code>pgvector</code> for search by meaning</td></tr>
+    <tr><td>Login</td><td>Supabase Auth, Google and email/password. Every table locked to its owner</td></tr>
+    <tr><td>AI</td><td>Gemini for sorting, summaries and answers, <code>gemini-embedding-001</code> for search</td></tr>
+    <tr><td>In the browser</td><td>Tesseract.js reads screenshots, pdf.js renders PDF covers. Both free, both off the server</td></tr>
   </tbody>
 </table>
 
-<p>Two choices worth calling out. The API sits on the same domain as the site, so there are no
-cross-domain requests in production at all. And reading text from images and PDFs happens in the
-browser, which keeps it off the server and off the bill.</p>
+<p>Two choices worth calling out: the API sits on the same domain as the site, so there are no
+cross-domain requests in production, and text extraction runs in the browser, off the server and
+off the bill.</p>
 
 <hr class="rule" />
 
 <div class="prd-open">
   <h2 id="prd" style="margin-top:6px">Product Requirements: MVP</h2>
-  <p style="margin-bottom:0">This is the brief the build actually ran against, written before the
-  first line of code. It's why the decisions above have dates and reasons attached.</p>
+  <p style="margin-bottom:0">The brief the build ran against, written before the first line of
+  code.</p>
 </div>
 
 <h3>1. Problem</h3>
-<p>People save learning material across LinkedIn, group chats and bookmarks, then rarely go back to
-it. Even when they do, it's hard to tell what's worth reading without reading it, or to find the
-right thing at all. The MVP solves this for people learning product management, where the content
-and vocabulary are predictable enough to sort reliably.</p>
-<p>This shapes the build: summaries are written and stored at save time instead of on demand, and
-"find the right thing fast" matters more than "store everything", because a folder app already
-does the second one.</p>
+<p>Saved learning material scatters across LinkedIn, group chats and bookmarks and rarely gets
+opened again (<a href="#problem">full version above</a>). What it means for the build: summaries
+are written at save time instead of on demand, and "find the right thing fast" matters more than
+"store everything".</p>
 
 <h3>2. Who it's for</h3>
-<p><b>Long term:</b> anyone who saves things to learn from later.</p>
-<p><b>MVP:</b> people learning product management. A big, clear first group whose content is
-predictable enough to make a fixed category list work.</p>
-<p><b>Not yet:</b> other roles and subjects. That's a categories and onboarding job, not a rebuild.</p>
+<p><b>MVP:</b> people learning product management, whose content is predictable enough to make a
+fixed category list work. <b>Long term:</b> anyone who saves things to learn from.
+<b>Not yet:</b> other subjects, which is a categories job and not a rebuild
+(<a href="#audience">reasoning above</a>).</p>
 
 <h3>3. Goals and non-goals</h3>
 <table>
@@ -737,28 +687,28 @@ predictable enough to make a fixed category list work.</p>
   <tbody>
     <tr><td>One place that takes every format this content arrives in</td><td>A general read-later app</td></tr>
     <tr><td>Judge if an item is worth reading, without reading it</td><td>Replacing LinkedIn or WhatsApp</td></tr>
-    <tr><td>Answer questions across everything saved, with sources</td><td>Answering from general knowledge instead of your saves</td></tr>
+    <tr><td>Answer questions across everything saved, with sources</td><td>Answering from general knowledge, not your saves</td></tr>
     <tr><td>Catch duplicates before they pile up</td><td>Sharing or multi-user features</td></tr>
   </tbody>
 </table>
 
 <h3>4. Rules locked before building</h3>
 <ul>
-  <li><b>No LinkedIn scraping.</b> Paste a link or the text only, because scraping breaks their terms.</li>
-  <li><b>No listening to WhatsApp.</b> You export a chat yourself and upload the <code>.txt</code>, which gets split into separate items.</li>
+  <li><b>No LinkedIn scraping.</b> Paste a link or the text only, since scraping breaks their terms.</li>
+  <li><b>No listening to WhatsApp.</b> You export a chat yourself and upload the <code>.txt</code>, which gets split into items.</li>
   <li><b>Single user for now.</b> No sharing, but every table has an owner from day one so multi-user isn't a rewrite.</li>
-  <li><b>Resurfacing cut</b> (2026-08-06, after the other six features shipped). See Decision 04.</li>
+  <li><b>Resurfacing cut</b> (2026-08-06, after the other six shipped). See Decision 04.</li>
 </ul>
 
 <h3>5. Feature scope</h3>
 <table>
   <thead><tr><th>#</th><th>Feature</th><th>Status</th></tr></thead>
   <tbody>
-    <tr><td>1</td><td>Saving by hand: text, link, image (OCR), PDF, WhatsApp export, interview question, job posting</td><td>Shipped</td></tr>
+    <tr><td>1</td><td>By hand: text, link, image (OCR), PDF, WhatsApp export, question, job posting</td><td>Shipped</td></tr>
     <tr><td>2</td><td>Sorting and summarising at save time</td><td>Shipped</td></tr>
-    <tr><td>3</td><td>Embeddings stored in pgvector, so search works by meaning</td><td>Shipped</td></tr>
+    <tr><td>3</td><td>Embeddings in pgvector, so search works by meaning</td><td>Shipped</td></tr>
     <tr><td>4</td><td>Library: list, filter, search, sort</td><td>Shipped</td></tr>
-    <tr><td>5</td><td>Ask My Vault, with every answer linked back to the saves it used</td><td>Shipped</td></tr>
+    <tr><td>5</td><td>Ask My Vault, every answer linked back to the saves it used</td><td>Shipped</td></tr>
     <tr><td>6</td><td>Duplicate warnings when a new save is too close to an old one</td><td>Shipped</td></tr>
     <tr><td>7</td><td>Resurfacing widget</td><td><b>Cut</b>, see Decision 04</td></tr>
   </tbody>
@@ -768,12 +718,12 @@ predictable enough to make a fixed category list work.</p>
 <table>
   <thead><tr><th>Table</th><th>What it holds</th></tr></thead>
   <tbody>
-    <tr><td><code>items</code></td><td>The content, its summary, key points, category, dates, and type-specific fields like page count</td></tr>
-    <tr><td><code>embeddings</code></td><td>The maths that powers search by meaning, one per item</td></tr>
+    <tr><td><code>items</code></td><td>The content, its summary, key points, category, dates, and fields like page count</td></tr>
+    <tr><td><code>embeddings</code></td><td>The maths behind search by meaning, one per item</td></tr>
     <tr><td><code>item_categories</code>, <code>tags</code></td><td>Categories and tags. Favourites are stored as a tag</td></tr>
-    <tr><td><code>duplicates</code></td><td>Pairs of near-identical items and how close they were</td></tr>
-    <tr><td><code>annotations</code></td><td>Highlights and notes, anchored so they survive edits to the text</td></tr>
-    <tr><td><code>chat_sessions</code>, <code>chat_queries</code></td><td>Conversations, answers, and the sources each answer used</td></tr>
+    <tr><td><code>duplicates</code></td><td>Near-identical pairs and how close they were</td></tr>
+    <tr><td><code>annotations</code></td><td>Highlights and notes, anchored so they survive edits</td></tr>
+    <tr><td><code>chat_sessions</code>, <code>chat_queries</code></td><td>Conversations, answers, and the sources each one used</td></tr>
   </tbody>
 </table>
 
@@ -781,34 +731,21 @@ predictable enough to make a fixed category list work.</p>
 <p>Interview Questions (Product Sense · RCA · Metrics · Strategy · Behavioural) · Job Postings ·
 Application Tips · Frameworks · Industry News · Other.</p>
 
-<h3>8. Not building yet</h3>
-<ul>
-  <li>Auto-syncing from LinkedIn or WhatsApp</li>
-  <li>Multi-user accounts and sharing</li>
-  <li>Resurfacing, in any form</li>
-</ul>
+<h3>8. What this project demonstrates</h3>
+<p>Defining a problem and rejecting the obvious answer, scoping an MVP with locked rules and one
+planned feature cut, building the search pipeline end to end, designing for trust and for the model
+failing, shipping it alone on a $0 stack.</p>
 
-<h3>9. What this project demonstrates</h3>
-<ul class="demo">
-  <li><span class="tick">▸</span><span><b>Defining the problem</b>: working out why saved content goes unused, and turning down the easy answer of better folders</span></li>
-  <li><span class="tick">▸</span><span><b>Scoping an MVP</b>: one clear first audience, four rules locked up front, one planned feature cut with its reason</span></li>
-  <li><span class="tick">▸</span><span><b>Designing a whole AI product</b>: saving, reviewing, searching and checking, built as one flow</span></li>
-  <li><span class="tick">▸</span><span><b>Building the search itself</b>: text extraction, embeddings, vector search and answers grounded in what was found</span></li>
-  <li><span class="tick">▸</span><span><b>Designing for trust</b>: citations that open the exact passage used, and answers that fail honestly when the model does</span></li>
-  <li><span class="tick">▸</span><span><b>Weighing cost against value</b>: a $0 stack, OCR in the browser, and limits that fail with a clear message</span></li>
-  <li><span class="tick">▸</span><span><b>Shipping it alone</b>: idea to live product, including login, security and a demo anyone can try</span></li>
-</ul>
-
-<h3>10. Roadmap</h3>
-<p>None of this is built. Each one says why it isn't in the MVP.</p>
+<h3>9. Roadmap</h3>
+<p>None of this is built. Each says why it isn't in the MVP.</p>
 
 <h4>Next: what still gets in the way</h4>
 <table>
   <thead><tr><th>What</th><th>Why it matters</th></tr></thead>
   <tbody>
-    <tr><td>Share straight from any app</td><td>Every save today is copy, switch app, paste. Saving really happens at the share sheet on your phone, and cutting that one step matters more than anything else here, because the whole idea rests on saving staying easy.</td></tr>
-    <tr><td>A first-run walkthrough</td><td>A new account opens onto an empty vault. Nothing to search, nothing to ask. It should get one real item in and one question answered before it asks anyone for trust.</td></tr>
-    <tr><td>Export the vault</td><td>What's saved here can only be read here. Export makes the tool safe to commit to, and it belongs inside the reset and delete flows. Offering a download before wiping a library is what makes that undoable.</td></tr>
+    <tr><td>Share straight from any app</td><td>Every save today is copy, switch app, paste. Cutting that step matters more than anything else here, because the whole idea rests on saving staying easy.</td></tr>
+    <tr><td>A first-run walkthrough</td><td>A new account opens onto an empty vault. It should land one real item and one answered question before asking anyone for trust.</td></tr>
+    <tr><td>Export the vault</td><td>What's saved here can only be read here. It belongs inside the reset and delete flows too, since a download before wiping a library makes that undoable.</td></tr>
     <tr><td>Browser extension</td><td>The desktop half of the same problem.</td></tr>
   </tbody>
 </table>
@@ -817,9 +754,9 @@ Application Tips · Frameworks · Industry News · Other.</p>
 <table>
   <thead><tr><th>What</th><th>Why it matters</th></tr></thead>
   <tbody>
-    <tr><td>Any job, any subject</td><td>Nothing about saving, embedding, searching or citing is specific to product management. Only the category list is. Let people set their own categories, or work them out from what they save, and this becomes a general study tool. It needs a walkthrough that asks what you're learning, and sorting that works without a fixed list.</td></tr>
-    <tr><td>Practice mode</td><td>The saves already hold questions, frameworks and worked answers. Turning those into drills and spaced repetition is what makes this a study tool instead of a library, and it's the best reason to come back.</td></tr>
-    <tr><td>Collections</td><td>Grouping saves into a plan ("week 3: metrics") gives the vault a shape that a flat list and a filter can't.</td></tr>
+    <tr><td>Any job, any subject</td><td>Only the category list is specific to product management. Make it configurable, or infer it from what someone saves, and this becomes a general study tool.</td></tr>
+    <tr><td>Practice mode</td><td>The saves already hold questions and worked answers. Turning those into drills makes this a study tool instead of a library, and it's the best reason to come back.</td></tr>
+    <tr><td>Collections</td><td>Grouping saves into a plan ("week 3: metrics") gives the vault a shape a flat list can't.</td></tr>
   </tbody>
 </table>
 
@@ -827,17 +764,16 @@ Application Tips · Frameworks · Industry News · Other.</p>
 <table>
   <thead><tr><th>What</th><th>Why it matters</th></tr></thead>
   <tbody>
-    <tr><td>Shared vaults</td><td>Study groups already pass this material around in group chats. A shared vault is where export and multi-user meet.</td></tr>
-    <tr><td>Anonymous "what's trending"</td><td>The one network effect here. The same embeddings that power personal search would group across accounts to show what everyone is studying. Needs multi-user, a privacy model, and enough people for the average to mean anything.</td></tr>
+    <tr><td>Shared vaults</td><td>Study groups already pass this material around in chats. A shared vault is where export and multi-user meet.</td></tr>
+    <tr><td>Anonymous "what's trending"</td><td>The one network effect here: the embeddings that power personal search would group across accounts to show what everyone is studying. Needs multi-user and enough people to mean anything.</td></tr>
   </tbody>
 </table>
 
 <div class="callout warn">
   <div class="label">Why in this order</div>
-  <p><b>Next</b> takes the friction out of something that already works. <b>Then</b> widens who it
-  works for. <b>Later</b> needs other people signed up, so it can't be pulled forward however
-  tempting. The one thing I wouldn't build without evidence is resurfacing. See
-  <a href="#decisions">Decision 04</a>.</p>
+  <p><b>Next</b> fixes what annoys people about something that already works. <b>Then</b> widens who
+  it works for. <b>Later</b> needs other people signed up, so it can't be pulled forward however
+  tempting.</p>
 </div>
 
 <footer>
